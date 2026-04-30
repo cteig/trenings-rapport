@@ -8,14 +8,12 @@ datasource db {
 }
 
 model User {
-  id             Int      @id @default(autoincrement())
-  stravaId       Int      @unique
-  firstName      String   @default("")
-  accessToken    String
-  refreshToken   String
-  tokenExpiresAt Int
-  activities     String?
+  id                 Int       @id @default(autoincrement())
+  email              String    @unique
+  firstName          String    @default("")
+  garminSession      String?
+  activities         String?
   activitiesCachedAt DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 }

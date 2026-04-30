@@ -1,23 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getValidAccessToken, getSessionUserId } from "@/lib/auth";
-import { getAllActivities } from "@/lib/strava";
+import { getSessionEmail } from "@/lib/auth";
+import { getAllActivities } from "@/lib/garmin";
 import { prisma } from "@/lib/prisma";
 
-const CACHE_TTL_MS = 1000 * 60 * 60; // 1 hour
+const CACHE_TTL_MS = 1000 * 60 * 60;
 
 export async function GET(request: NextRequest) {
-  const token = await getValidAccessToken();
-  if (!token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  const stravaId = await getSessionUserId();
-  if (!stravaId) {
+  const email = await getSessionEmail();
+  if (!email) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
   const forceRefresh = request.nextUrl.searchParams.get("refresh") === "1";
-  const user = await prisma.user.findUnique({ where: { stravaId } });
+  const user = await prisma.user.findUnique({ where: { email } });
 
   if (!forceRefresh && user?.activities && user.activitiesCachedAt) {
     const age = Date.now() - user.activitiesCachedAt.getTime();
@@ -27,9 +22,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const activities = await getAllActivities();
+    const activities = await getAllActivities(email);
     await prisma.user.update({
-      where: { stravaId },
+      where: { email },
       data: {
         activities: JSON.stringify(activities),
         activitiesCachedAt: new Date(),

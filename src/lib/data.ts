@@ -80,8 +80,6 @@ export interface IntensityData {
 }
 
 export function calculateIntensityFromActivities(activities: StravaActivity[]): IntensityData[] {
-  // HR zone thresholds: Z1 <60%, Z2 60-70%, Z3 70-80%, Z4 80-90%, Z5 90%+ of max HR
-  const zones = [0, 0, 0, 0, 0];
   const zoneNames = [
     "Sone 1 (Hvile)",
     "Sone 2 (Lett)",
@@ -90,12 +88,28 @@ export function calculateIntensityFromActivities(activities: StravaActivity[]): 
     "Sone 5 (Maks)",
   ];
 
+  const hasGarminZones = activities.some((a) => a.hr_time_in_zone_1 != null);
+
+  if (hasGarminZones) {
+    const zones = [0, 0, 0, 0, 0];
+    for (const act of activities) {
+      zones[0] += act.hr_time_in_zone_1 || 0;
+      zones[1] += act.hr_time_in_zone_2 || 0;
+      zones[2] += act.hr_time_in_zone_3 || 0;
+      zones[3] += act.hr_time_in_zone_4 || 0;
+      zones[4] += act.hr_time_in_zone_5 || 0;
+    }
+    return zoneNames.map((name, i) => ({
+      zone: name,
+      minutes: Math.round(zones[i] / 60),
+    }));
+  }
+
+  const zones = [0, 0, 0, 0, 0];
   for (const act of activities) {
     if (!act.has_heartrate || !act.average_heartrate || !act.max_heartrate) continue;
-
     const ratio = act.average_heartrate / act.max_heartrate;
     const minutes = act.moving_time / 60;
-
     if (ratio < 0.6) zones[0] += minutes;
     else if (ratio < 0.7) zones[1] += minutes;
     else if (ratio < 0.8) zones[2] += minutes;
@@ -130,4 +144,126 @@ export function getActivityTypeDistribution(
       sessions: data.sessions,
     }))
     .sort((a, b) => b.minutes - a.minutes);
+}
+
+export interface TrainingEffectPoint {
+  date: string;
+  name: string;
+  aerobic: number;
+  anaerobic: number;
+}
+
+export function getTrainingEffectOverTime(activities: StravaActivity[]): TrainingEffectPoint[] {
+  return activities
+    .filter((a) => a.aerobic_training_effect != null)
+    .sort((a, b) => a.start_date_local.localeCompare(b.start_date_local))
+    .map((a) => {
+      const aerob = a.aerobic_training_effect || 0;
+      const anaerob = a.anaerobic_training_effect || 0;
+      const total = aerob + anaerob;
+      return {
+        date: format(new Date(a.start_date_local), "dd.MM"),
+        name: a.name,
+        aerobic: total > 0 ? Math.round((aerob / total) * 100) : 0,
+        anaerobic: total > 0 ? Math.round((anaerob / total) * 100) : 0,
+      };
+    });
+}
+
+export interface VO2MaxPoint {
+  date: string;
+  vo2max: number;
+}
+
+export function getVO2MaxOverTime(activities: StravaActivity[]): VO2MaxPoint[] {
+  const points: VO2MaxPoint[] = [];
+  let lastValue: number | null = null;
+
+  const sorted = activities
+    .filter((a) => a.vo2max != null && a.vo2max > 0)
+    .sort((a, b) => a.start_date_local.localeCompare(b.start_date_local));
+
+  for (const a of sorted) {
+    if (a.vo2max !== lastValue) {
+      points.push({
+        date: format(new Date(a.start_date_local), "dd.MM"),
+        vo2max: a.vo2max!,
+      });
+      lastValue = a.vo2max!;
+    }
+  }
+  return points;
+}
+
+export interface RunningDynamicsPoint {
+  date: string;
+  cadence?: number;
+  strideLength?: number;
+  groundContactTime?: number;
+}
+
+export function getRunningDynamics(activities: StravaActivity[]): RunningDynamicsPoint[] {
+  return activities
+    .filter((a) => a.avg_running_cadence != null && a.sport_type.includes("running"))
+    .sort((a, b) => a.start_date_local.localeCompare(b.start_date_local))
+    .map((a) => ({
+      date: format(new Date(a.start_date_local), "dd.MM"),
+      cadence: a.avg_running_cadence ? Math.round(a.avg_running_cadence) : undefined,
+      strideLength: a.avg_stride_length ? Math.round(a.avg_stride_length) : undefined,
+      groundContactTime: a.avg_ground_contact_time
+        ? Math.round(a.avg_ground_contact_time)
+        : undefined,
+    }));
+}
+
+export interface ElevationByMonth {
+  month: string;
+  gain: number;
+  loss: number;
+}
+
+export function getElevationByMonth(activities: StravaActivity[]): ElevationByMonth[] {
+  const map = new Map<string, { gain: number; loss: number }>();
+
+  for (const act of activities) {
+    const date = new Date(act.start_date_local);
+    const key = format(startOfMonth(date), "MMM yyyy", { locale: nb });
+    const existing = map.get(key) || { gain: 0, loss: 0 };
+    existing.gain += act.total_elevation_gain || 0;
+    existing.loss += act.elevation_loss || 0;
+    map.set(key, existing);
+  }
+
+  return Array.from(map.entries()).map(([month, data]) => ({
+    month,
+    gain: Math.round(data.gain),
+    loss: Math.round(data.loss),
+  }));
+}
+
+export interface TrainingLoadByWeek {
+  week: string;
+  load: number;
+}
+
+export function getTrainingLoadByWeek(activities: StravaActivity[]): TrainingLoadByWeek[] {
+  const map = new Map<string, { sortKey: string; load: number }>();
+
+  for (const act of activities) {
+    if (!act.training_load) continue;
+    const date = new Date(act.start_date_local);
+    const weekStart = startOfWeek(date, { weekStartsOn: 1 });
+    const key = format(weekStart, "'Uke' w", { locale: nb });
+    const sortKey = format(weekStart, "yyyy-MM-dd");
+    const existing = map.get(key) || { sortKey, load: 0 };
+    existing.load += act.training_load;
+    map.set(key, existing);
+  }
+
+  return Array.from(map.entries())
+    .sort((a, b) => a[1].sortKey.localeCompare(b[1].sortKey))
+    .map(([week, { load }]) => ({
+      week,
+      load: Math.round(load),
+    }));
 }

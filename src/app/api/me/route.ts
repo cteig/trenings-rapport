@@ -1,21 +1,10 @@
 import { NextResponse } from "next/server";
-import { getSessionUserId } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getSessionUser } from "@/lib/auth";
 
 export async function GET() {
-  const stravaId = await getSessionUserId();
-  if (!stravaId) {
+  const user = await getSessionUser();
+  if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
-
-  const user = await prisma.user.findUnique({
-    where: { stravaId },
-    select: { firstName: true },
-  });
-
-  if (!user) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
-  }
-
   return NextResponse.json({ firstName: user.firstName });
 }
