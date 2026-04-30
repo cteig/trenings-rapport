@@ -1,15 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { StravaActivity } from "@/types/strava";
 import {
   groupActivitiesByPeriod,
@@ -56,9 +48,11 @@ export default function Dashboard() {
     setAuthenticated(true);
     setLoading(false);
 
-    fetch("/api/me").then(r => r.ok ? r.json() : null).then(d => {
-      if (d?.firstName) setFirstName(d.firstName);
-    });
+    fetch("/api/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.firstName) setFirstName(d.firstName);
+      });
   }, []);
 
   const forceRefresh = useCallback(() => {
@@ -96,7 +90,10 @@ export default function Dashboard() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
         <p className="text-red-500">{error}</p>
-        <button onClick={() => fetchActivities()} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">
+        <button
+          onClick={() => fetchActivities()}
+          className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+        >
           Prøv igjen
         </button>
       </div>
@@ -107,11 +104,10 @@ export default function Dashboard() {
     new Set(activities.map((a) => new Date(a.start_date_local).getFullYear()))
   ).sort((a, b) => b - a);
 
-  const filteredActivities = period === "year"
-    ? activities
-    : activities.filter(
-        (a) => new Date(a.start_date_local).getFullYear() === selectedYear
-      );
+  const filteredActivities =
+    period === "year"
+      ? activities
+      : activities.filter((a) => new Date(a.start_date_local).getFullYear() === selectedYear);
 
   const summaries = groupActivitiesByPeriod(filteredActivities, period);
   const intensity = calculateIntensityFromActivities(filteredActivities);
@@ -167,7 +163,9 @@ export default function Dashboard() {
             className="border rounded-lg px-3 py-1.5 text-sm font-medium bg-white"
           >
             {availableYears.map((y) => (
-              <option key={y} value={y}>{y}</option>
+              <option key={y} value={y}>
+                {y}
+              </option>
             ))}
           </select>
           <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
@@ -185,10 +183,7 @@ export default function Dashboard() {
               </button>
             ))}
           </div>
-          <button
-            onClick={forceRefresh}
-            className="text-sm text-gray-500 hover:text-gray-700"
-          >
+          <button onClick={forceRefresh} className="text-sm text-gray-500 hover:text-gray-700">
             Oppdater data
           </button>
           <a href="/api/auth/logout" className="text-sm text-gray-500 hover:text-gray-700">
@@ -218,12 +213,16 @@ export default function Dashboard() {
 
       <section className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Treningsvolum per {PERIOD_LABELS[period].toLowerCase()}</h2>
+          <h2 className="text-lg font-semibold">
+            Treningsvolum per {PERIOD_LABELS[period].toLowerCase()}
+          </h2>
           <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
             <button
               onClick={() => setVolumeMetric("timer")}
               className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                volumeMetric === "timer" ? "bg-white shadow text-gray-900" : "text-gray-600 hover:text-gray-900"
+                volumeMetric === "timer"
+                  ? "bg-white shadow text-gray-900"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
               Timer
@@ -231,7 +230,9 @@ export default function Dashboard() {
             <button
               onClick={() => setVolumeMetric("distanse")}
               className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                volumeMetric === "distanse" ? "bg-white shadow text-gray-900" : "text-gray-600 hover:text-gray-900"
+                volumeMetric === "distanse"
+                  ? "bg-white shadow text-gray-900"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
               Distanse
@@ -242,16 +243,22 @@ export default function Dashboard() {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={volumeData}>
               <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-              <YAxis tickFormatter={volumeMetric === "timer" ? (v) => `${Math.floor(v)}t` : (v) => `${v} km`} />
-              <Tooltip formatter={(value, name) => {
-                const v = Number(value);
-                if (volumeMetric === "timer") {
-                  const h = Math.floor(v);
-                  const m = Math.round((v - h) * 60);
-                  return [`${h}t ${m}m`, name];
+              <YAxis
+                tickFormatter={
+                  volumeMetric === "timer" ? (v) => `${Math.floor(v)}t` : (v) => `${v} km`
                 }
-                return [`${v.toFixed(1)} km`, name];
-              }} />
+              />
+              <Tooltip
+                formatter={(value, name) => {
+                  const v = Number(value);
+                  if (volumeMetric === "timer") {
+                    const h = Math.floor(v);
+                    const m = Math.round((v - h) * 60);
+                    return [`${h}t ${m}m`, name];
+                  }
+                  return [`${v.toFixed(1)} km`, name];
+                }}
+              />
               <Legend />
               {allActivityTypes.map((type, i) => (
                 <Bar key={type} dataKey={type} stackId="a" fill={getColorForType(type, i)} />
@@ -269,7 +276,9 @@ export default function Dashboard() {
               <button
                 onClick={() => setTypeMetric("timer")}
                 className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                  typeMetric === "timer" ? "bg-white shadow text-gray-900" : "text-gray-600 hover:text-gray-900"
+                  typeMetric === "timer"
+                    ? "bg-white shadow text-gray-900"
+                    : "text-gray-600 hover:text-gray-900"
                 }`}
               >
                 Timer
@@ -277,7 +286,9 @@ export default function Dashboard() {
               <button
                 onClick={() => setTypeMetric("distanse")}
                 className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                  typeMetric === "distanse" ? "bg-white shadow text-gray-900" : "text-gray-600 hover:text-gray-900"
+                  typeMetric === "distanse"
+                    ? "bg-white shadow text-gray-900"
+                    : "text-gray-600 hover:text-gray-900"
                 }`}
               >
                 Distanse
@@ -291,12 +302,14 @@ export default function Dashboard() {
                   <>
                     <XAxis type="number" tickFormatter={(v) => `${Math.floor(v / 60)}t`} />
                     <YAxis dataKey="type" type="category" tick={{ fontSize: 12 }} width={100} />
-                    <Tooltip formatter={(value) => {
-                      const v = Number(value);
-                      const h = Math.floor(v / 60);
-                      const m = Math.round(v % 60);
-                      return `${h}t ${m}m`;
-                    }} />
+                    <Tooltip
+                      formatter={(value) => {
+                        const v = Number(value);
+                        const h = Math.floor(v / 60);
+                        const m = Math.round(v % 60);
+                        return `${h}t ${m}m`;
+                      }}
+                    />
                     <Bar dataKey="minutes" fill="#f97316" />
                   </>
                 ) : (

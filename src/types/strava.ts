@@ -40,9 +40,12 @@ export interface ActivitySummary {
   totalDuration: number; // minutes
   totalDistance: number; // km
   totalSessions: number;
-  byType: Record<string, {
-    duration: number;
-    distance: number;
-    sessions: number;
-  }>;
+  byType: Record<
+    string,
+    {
+      duration: number;
+      distance: number;
+      sessions: number;
+    }
+  >;
 }

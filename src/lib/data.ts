@@ -1,9 +1,4 @@
-import {
-  startOfWeek,
-  startOfMonth,
-  startOfYear,
-  format,
-} from "date-fns";
+import { startOfWeek, startOfMonth, startOfYear, format } from "date-fns";
 import { nb } from "date-fns/locale";
 import { StravaActivity, PeriodType, ActivitySummary } from "@/types/strava";
 
@@ -84,12 +79,16 @@ export interface IntensityData {
   minutes: number;
 }
 
-export function calculateIntensityFromActivities(
-  activities: StravaActivity[]
-): IntensityData[] {
+export function calculateIntensityFromActivities(activities: StravaActivity[]): IntensityData[] {
   // HR zone thresholds: Z1 <60%, Z2 60-70%, Z3 70-80%, Z4 80-90%, Z5 90%+ of max HR
   const zones = [0, 0, 0, 0, 0];
-  const zoneNames = ["Sone 1 (Hvile)", "Sone 2 (Lett)", "Sone 3 (Moderat)", "Sone 4 (Hard)", "Sone 5 (Maks)"];
+  const zoneNames = [
+    "Sone 1 (Hvile)",
+    "Sone 2 (Lett)",
+    "Sone 3 (Moderat)",
+    "Sone 4 (Hard)",
+    "Sone 5 (Maks)",
+  ];
 
   for (const act of activities) {
     if (!act.has_heartrate || !act.average_heartrate || !act.max_heartrate) continue;
@@ -124,6 +123,11 @@ export function getActivityTypeDistribution(
   }
 
   return Array.from(map.entries())
-    .map(([type, data]) => ({ type, minutes: Math.round(data.minutes), km: +data.km.toFixed(1), sessions: data.sessions }))
+    .map(([type, data]) => ({
+      type,
+      minutes: Math.round(data.minutes),
+      km: +data.km.toFixed(1),
+      sessions: data.sessions,
+    }))
     .sort((a, b) => b.minutes - a.minutes);
 }

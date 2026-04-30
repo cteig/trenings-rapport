@@ -26,9 +26,7 @@ export async function getActivities(
   page: number = 1,
   perPage: number = 200
 ): Promise<StravaActivity[]> {
-  return stravaFetch<StravaActivity[]>(
-    `/athlete/activities?page=${page}&per_page=${perPage}`
-  );
+  return stravaFetch<StravaActivity[]>(`/athlete/activities?page=${page}&per_page=${perPage}`);
 }
 
 export async function getAllActivities(): Promise<StravaActivity[]> {
@@ -58,8 +56,6 @@ export interface ActivityZoneData {
   type: string;
 }
 
-export async function getActivityZones(
-  activityId: number
-): Promise<ActivityZoneData[]> {
+export async function getActivityZones(activityId: number): Promise<ActivityZoneData[]> {
   return stravaFetch<ActivityZoneData[]>(`/activities/${activityId}/zones`);
 }
