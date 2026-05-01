@@ -3,6 +3,9 @@ import {
   groupActivitiesByPeriod,
   calculateIntensityFromActivities,
   getActivityTypeDistribution,
+  getIntensityPercentageByPeriod,
+  getVO2MaxOverTime,
+  getTrainingLoadByWeek,
 } from "../data";
 import { StravaActivity } from "@/types/strava";
 
@@ -225,5 +228,119 @@ describe("getActivityTypeDistribution", () => {
 
   it("returns empty for no activities", () => {
     expect(getActivityTypeDistribution([])).toEqual([]);
+  });
+});
+
+describe("getIntensityPercentageByPeriod", () => {
+  it("calculates zone percentages from Garmin zone data per month", () => {
+    const activities = [
+      makeActivity({
+        id: 1,
+        start_date_local: "2025-01-05T08:00:00",
+        hr_time_in_zone_1: 600,
+        hr_time_in_zone_2: 1800,
+        hr_time_in_zone_3: 600,
+        hr_time_in_zone_4: 0,
+        hr_time_in_zone_5: 0,
+      }),
+      makeActivity({
+        id: 2,
+        start_date_local: "2025-01-20T08:00:00",
+        hr_time_in_zone_1: 0,
+        hr_time_in_zone_2: 600,
+        hr_time_in_zone_3: 600,
+        hr_time_in_zone_4: 600,
+        hr_time_in_zone_5: 600,
+      }),
+    ];
+
+    const result = getIntensityPercentageByPeriod(activities, "month");
+
+    expect(result).toHaveLength(1);
+    expect(result[0].period).toContain("januar");
+    expect(result[0].zone1).toBe(11);
+    expect(result[0].zone2).toBe(44);
+    expect(result[0].zone3).toBe(22);
+    expect(result[0].zone4).toBe(11);
+    expect(result[0].zone5).toBe(11);
+  });
+
+  it("falls back to avg/max heartrate ratios when Garmin zones are missing", () => {
+    const activities = [
+      makeActivity({
+        id: 1,
+        has_heartrate: true,
+        average_heartrate: 110,
+        max_heartrate: 200,
+        moving_time: 3600,
+      }),
+      makeActivity({
+        id: 2,
+        has_heartrate: true,
+        average_heartrate: 150,
+        max_heartrate: 200,
+        moving_time: 3600,
+      }),
+    ];
+
+    const result = getIntensityPercentageByPeriod(activities, "week");
+
+    expect(result).toHaveLength(1);
+    expect(result[0].zone1).toBe(50);
+    expect(result[0].zone3).toBe(50);
+    expect(result[0].zone2).toBe(0);
+    expect(result[0].zone4).toBe(0);
+    expect(result[0].zone5).toBe(0);
+  });
+});
+
+describe("getVO2MaxOverTime", () => {
+  it("returns one point per year when period is year", () => {
+    const activities = [
+      makeActivity({ id: 1, start_date_local: "2024-01-15T08:00:00", vo2max: 51 }),
+      makeActivity({ id: 2, start_date_local: "2024-10-01T08:00:00", vo2max: 53 }),
+      makeActivity({ id: 3, start_date_local: "2025-02-01T08:00:00", vo2max: 54 }),
+    ];
+
+    const result = getVO2MaxOverTime(activities, "year");
+
+    expect(result).toEqual([
+      { date: "2024", vo2max: 53 },
+      { date: "2025", vo2max: 54 },
+    ]);
+  });
+
+  it("deduplicates unchanged consecutive VO2max values in detailed view", () => {
+    const activities = [
+      makeActivity({ id: 1, start_date_local: "2025-01-01T08:00:00", vo2max: 52 }),
+      makeActivity({ id: 2, start_date_local: "2025-01-10T08:00:00", vo2max: 52 }),
+      makeActivity({ id: 3, start_date_local: "2025-01-20T08:00:00", vo2max: 53 }),
+    ];
+
+    const result = getVO2MaxOverTime(activities, "month");
+
+    expect(result).toHaveLength(2);
+    expect(result[0].vo2max).toBe(52);
+    expect(result[1].vo2max).toBe(53);
+  });
+});
+
+describe("getTrainingLoadByWeek", () => {
+  it("sorts weekly training load chronologically", () => {
+    const activities = [
+      makeActivity({ id: 1, start_date_local: "2025-03-17T08:00:00", training_load: 50 }),
+      makeActivity({ id: 2, start_date_local: "2025-03-03T08:00:00", training_load: 20 }),
+      makeActivity({ id: 3, start_date_local: "2025-03-10T08:00:00", training_load: 30 }),
+    ];
+
+    const result = getTrainingLoadByWeek(activities);
+
+    expect(result).toHaveLength(3);
+    expect(result[0].week).toContain("Uke 10");
+    expect(result[1].week).toContain("Uke 11");
+    expect(result[2].week).toContain("Uke 12");
+    expect(result[0].load).toBe(20);
+    expect(result[1].load).toBe(30);
+    expect(result[2].load).toBe(50);
   });
 });
