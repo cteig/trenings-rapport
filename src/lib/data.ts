@@ -183,13 +183,18 @@ export function getIntensityPercentageByPeriod(
         zoneSeconds: [0, 0, 0, 0, 0] as [number, number, number, number, number],
       };
       const total = value.zoneSeconds.reduce((sum, zone) => sum + zone, 0);
+      const zone1 = total > 0 ? Math.round((value.zoneSeconds[0] / total) * 100) : 0;
+      const zone2 = total > 0 ? Math.round((value.zoneSeconds[1] / total) * 100) : 0;
+      const zone3 = total > 0 ? Math.round((value.zoneSeconds[2] / total) * 100) : 0;
+      const zone4 = total > 0 ? Math.round((value.zoneSeconds[3] / total) * 100) : 0;
+      const zone5 = total > 0 ? Math.max(0, 100 - zone1 - zone2 - zone3 - zone4) : 0;
       return {
         period: key,
-        zone1: total > 0 ? Math.round((value.zoneSeconds[0] / total) * 100) : 0,
-        zone2: total > 0 ? Math.round((value.zoneSeconds[1] / total) * 100) : 0,
-        zone3: total > 0 ? Math.round((value.zoneSeconds[2] / total) * 100) : 0,
-        zone4: total > 0 ? Math.round((value.zoneSeconds[3] / total) * 100) : 0,
-        zone5: total > 0 ? Math.round((value.zoneSeconds[4] / total) * 100) : 0,
+        zone1,
+        zone2,
+        zone3,
+        zone4,
+        zone5,
       };
     });
 }
@@ -232,11 +237,12 @@ export function getTrainingEffectOverTime(activities: StravaActivity[]): Trainin
       const aerob = a.aerobic_training_effect || 0;
       const anaerob = a.anaerobic_training_effect || 0;
       const total = aerob + anaerob;
+      const aerobicPercent = total > 0 ? Math.round((aerob / total) * 100) : 0;
       return {
         date: format(new Date(a.start_date_local), "dd.MM"),
         name: a.name,
-        aerobic: total > 0 ? Math.round((aerob / total) * 100) : 0,
-        anaerobic: total > 0 ? Math.round((anaerob / total) * 100) : 0,
+        aerobic: aerobicPercent,
+        anaerobic: total > 0 ? 100 - aerobicPercent : 0,
       };
     });
 }

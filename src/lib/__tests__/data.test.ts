@@ -4,6 +4,7 @@ import {
   calculateIntensityFromActivities,
   getActivityTypeDistribution,
   getIntensityPercentageByPeriod,
+  getTrainingEffectOverTime,
   getVO2MaxOverTime,
   getTrainingLoadByWeek,
 } from "../data";
@@ -262,7 +263,7 @@ describe("getIntensityPercentageByPeriod", () => {
     expect(result[0].zone2).toBe(44);
     expect(result[0].zone3).toBe(22);
     expect(result[0].zone4).toBe(11);
-    expect(result[0].zone5).toBe(11);
+    expect(result[0].zone5).toBe(12);
   });
 
   it("falls back to avg/max heartrate ratios when Garmin zones are missing", () => {
@@ -322,6 +323,26 @@ describe("getVO2MaxOverTime", () => {
     expect(result).toHaveLength(2);
     expect(result[0].vo2max).toBe(52);
     expect(result[1].vo2max).toBe(53);
+  });
+});
+
+describe("getTrainingEffectOverTime", () => {
+  it("keeps aerobic and anaerobic percentages at 100 total", () => {
+    const activities = [
+      makeActivity({
+        id: 1,
+        start_date_local: "2025-03-10T08:00:00",
+        aerobic_training_effect: 2,
+        anaerobic_training_effect: 7,
+      }),
+    ];
+
+    const result = getTrainingEffectOverTime(activities);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].aerobic).toBe(22);
+    expect(result[0].anaerobic).toBe(78);
+    expect(result[0].aerobic + result[0].anaerobic).toBe(100);
   });
 });
 
