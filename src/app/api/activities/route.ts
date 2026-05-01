@@ -17,7 +17,8 @@ function normalizeActivityTypes(activities: unknown) {
       item.type === "NordicSki" ||
       item.type === "cross_country_skiing" ||
       item.type === "cross_country_skiing_ws" ||
-      item.type === "skate_skiing_ws"
+      item.type === "skate_skiing_ws" ||
+      item.type === "resort_skiing_snowboarding_ws"
     ) {
       return { ...item, type: "Skiing" };
     }
@@ -32,7 +33,12 @@ function normalizeActivityTypes(activities: unknown) {
       return { ...item, type: "Sykkel" };
     }
 
-    if (item.type === "WeightTraining" || item.type === "strength_training") {
+    if (
+      item.type === "WeightTraining" ||
+      item.type === "strength_training" ||
+      item.type === "pilates" ||
+      item.type === "fitness_equipment"
+    ) {
       return { ...item, type: "Styrke" };
     }
 
@@ -55,6 +61,10 @@ function normalizeActivityTypes(activities: unknown) {
 
     if (item.type === "breathwork") {
       return { ...item, type: "Pusteøvelse" };
+    }
+
+    if (item.type === "track_running" || item.type === "street_running") {
+      return { ...item, type: "Run" };
     }
 
     return item;
