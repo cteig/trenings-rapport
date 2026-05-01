@@ -1,7 +1,13 @@
 import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 
-const adapter = new PrismaLibSql({ url: "file:prisma/dev.db" });
+const defaultDatabaseUrl =
+  process.env.NODE_ENV === "production"
+    ? "file:/var/lib/trenings-rapport/dev.db"
+    : "file:prisma/dev.db";
+
+const databaseUrl = process.env.DATABASE_URL || defaultDatabaseUrl;
+const adapter = new PrismaLibSql({ url: databaseUrl });
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
