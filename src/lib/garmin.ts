@@ -1,6 +1,7 @@
 import { GarminConnect } from "garmin-connect";
 import { prisma } from "./prisma";
 import { StravaActivity } from "@/types/strava";
+import type { WellnessDay } from "@/types/wellness";
 
 export async function createGarminClient(email: string): Promise<GarminConnect> {
   const user = await prisma.user.findUnique({ where: { email } });
@@ -250,4 +251,82 @@ export async function getThresholdHistory(email: string) {
     where: { userId: user.id },
     orderBy: { recordedAt: "asc" },
   });
+}
+
+function formatWellnessDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getPastDates(days: number) {
+  const dates: Date[] = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  for (let i = days - 1; i >= 0; i -= 1) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - i);
+    dates.push(date);
+  }
+
+  return dates;
+}
+
+export async function getWellnessData(email: string, days = 30): Promise<WellnessDay[]> {
+  const gc = await createGarminClient(email);
+  const dates = getPastDates(days);
+  const results: WellnessDay[] = [];
+
+  for (const date of dates) {
+    try {
+      const sleep = await gc.getSleepData(date).catch(() => null);
+      const heartRate = await gc.getHeartRate(date).catch(() => null);
+
+      const dailySleep = sleep?.dailySleepDTO;
+      const overallSleepScore = dailySleep?.sleepScores?.overall?.value;
+      const hasSleepData = !!dailySleep;
+      const hasHeartRateData = !!heartRate;
+
+      results.push({
+        date: formatWellnessDate(date),
+        sleepSeconds: dailySleep?.sleepTimeSeconds ?? 0,
+        deepSleepSeconds: dailySleep?.deepSleepSeconds ?? 0,
+        lightSleepSeconds: dailySleep?.lightSleepSeconds ?? 0,
+        remSleepSeconds: dailySleep?.remSleepSeconds ?? 0,
+        awakeSleepSeconds: dailySleep?.awakeSleepSeconds ?? 0,
+        sleepScore: overallSleepScore ?? undefined,
+        avgSleepStress: dailySleep?.avgSleepStress ?? undefined,
+        avgOvernightHrv: sleep?.avgOvernightHrv ?? undefined,
+        hrvStatus: sleep?.hrvStatus ?? undefined,
+        restingHeartRate: heartRate?.restingHeartRate ?? sleep?.restingHeartRate ?? undefined,
+        bodyBatteryChange: sleep?.bodyBatteryChange ?? undefined,
+        averageRespiration: dailySleep?.averageRespirationValue ?? undefined,
+        maxHeartRate: heartRate?.maxHeartRate ?? undefined,
+        minHeartRate: heartRate?.minHeartRate ?? undefined,
+        hasSleepData,
+        hasHeartRateData,
+      });
+    } catch {
+      results.push({
+        date: formatWellnessDate(date),
+        sleepSeconds: 0,
+        deepSleepSeconds: 0,
+        lightSleepSeconds: 0,
+        remSleepSeconds: 0,
+        awakeSleepSeconds: 0,
+        hasSleepData: false,
+        hasHeartRateData: false,
+      });
+    }
+  }
+
+  const token = await gc.exportToken();
+  await prisma.user.update({
+    where: { email },
+    data: { garminSession: JSON.stringify(token) },
+  });
+
+  return results;
 }
