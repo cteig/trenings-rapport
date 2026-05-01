@@ -1,11 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSessionEmail } from "@/lib/auth";
-import { getThresholdData } from "@/lib/garmin";
+import { getThresholdData, getThresholdHistory } from "@/lib/garmin";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const email = await getSessionEmail();
   if (!email) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  if (request.nextUrl.searchParams.get("history") === "1") {
+    const history = await getThresholdHistory(email);
+    return NextResponse.json(history);
   }
 
   const data = await getThresholdData(email);

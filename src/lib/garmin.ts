@@ -74,6 +74,9 @@ export async function getAllActivities(email: string): Promise<StravaActivity[]>
     start += limit;
   }
 
+  const threshold = await fetchThresholdData(gc);
+  await storeThresholdSnapshot(email, threshold);
+
   const token = await gc.exportToken();
   await prisma.user.update({
     where: { email },
@@ -123,19 +126,25 @@ function mapGarminActivity(act: any): StravaActivity {
 function mapActivityType(garminType: string): string {
   const typeMap: Record<string, string> = {
     running: "Run",
-    cycling: "Ride",
+    cycling: "Sykkel",
     swimming: "Swim",
-    walking: "Walk",
-    hiking: "Hike",
-    strength_training: "WeightTraining",
+    walking: "Walking",
+    hiking: "Walking",
+    strength_training: "Styrke",
     yoga: "Yoga",
     cardio: "Workout",
-    cross_country_skiing: "NordicSki",
+    breathwork: "Pusteøvelse",
+    rowing_v2: "Roing",
+    cross_country_skiing: "Skiing",
+    cross_country_skiing_ws: "Skiing",
+    skate_skiing_ws: "Skiing",
     resort_skiing: "AlpineSki",
     rock_climbing: "RockClimbing",
-    virtual_ride: "VirtualRide",
+    indoor_climbing: "Klatring",
+    virtual_ride: "Sykkel",
     treadmill_running: "Run",
-    indoor_cycling: "Ride",
+    indoor_cycling: "Sykkel",
+    mountain_biking: "Sykkel",
     trail_running: "Run",
     open_water_swimming: "Swim",
     lap_swimming: "Swim",
@@ -150,9 +159,8 @@ export interface ThresholdData {
   vo2MaxCycling?: number;
 }
 
-export async function getThresholdData(email: string): Promise<ThresholdData | null> {
+async function fetchThresholdData(gc: GarminConnect): Promise<ThresholdData | null> {
   try {
-    const gc = await createGarminClient(email);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const settings: any = await gc.getUserSettings();
     const userData = settings?.userData;
@@ -175,4 +183,66 @@ export async function getThresholdData(email: string): Promise<ThresholdData | n
   } catch {
     return null;
   }
+}
+
+async function storeThresholdSnapshot(
+  email: string,
+  threshold: ThresholdData | null
+): Promise<void> {
+  if (!threshold) return;
+
+  const hasAnyValue =
+    threshold.lactateThresholdHR != null ||
+    threshold.lactateThresholdPace != null ||
+    threshold.vo2MaxRunning != null ||
+    threshold.vo2MaxCycling != null;
+
+  if (!hasAnyValue) return;
+
+  const user = await prisma.user.findUnique({
+    where: { email },
+    include: {
+      thresholdSnapshots: {
+        orderBy: { recordedAt: "desc" },
+        take: 1,
+      },
+    },
+  });
+
+  if (!user) return;
+
+  const latest = user.thresholdSnapshots[0];
+  const unchanged =
+    latest != null &&
+    latest.lactateThresholdHR === (threshold.lactateThresholdHR ?? null) &&
+    latest.lactateThresholdPace === (threshold.lactateThresholdPace ?? null) &&
+    latest.vo2MaxRunning === (threshold.vo2MaxRunning ?? null) &&
+    latest.vo2MaxCycling === (threshold.vo2MaxCycling ?? null);
+
+  if (unchanged) return;
+
+  await prisma.thresholdSnapshot.create({
+    data: {
+      userId: user.id,
+      lactateThresholdHR: threshold.lactateThresholdHR,
+      lactateThresholdPace: threshold.lactateThresholdPace,
+      vo2MaxRunning: threshold.vo2MaxRunning,
+      vo2MaxCycling: threshold.vo2MaxCycling,
+    },
+  });
+}
+
+export async function getThresholdData(email: string): Promise<ThresholdData | null> {
+  const gc = await createGarminClient(email);
+  return fetchThresholdData(gc);
+}
+
+export async function getThresholdHistory(email: string) {
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) return [];
+
+  return prisma.thresholdSnapshot.findMany({
+    where: { userId: user.id },
+    orderBy: { recordedAt: "asc" },
+  });
 }
