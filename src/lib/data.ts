@@ -144,10 +144,13 @@ export function getIntensityPercentageByPeriod(
     }
   >();
 
+  const allPeriods = new Map<string, string>();
+
   for (const act of activities) {
     const date = new Date(act.start_date_local);
     const key = getPeriodKey(date, period);
     const sortKey = getPeriodSortKey(date, period);
+    allPeriods.set(key, sortKey);
     const entry = map.get(key) || {
       sortKey,
       zoneSeconds: [0, 0, 0, 0, 0] as [number, number, number, number, number],
@@ -172,9 +175,13 @@ export function getIntensityPercentageByPeriod(
     map.set(key, entry);
   }
 
-  return Array.from(map.entries())
-    .sort((a, b) => a[1].sortKey.localeCompare(b[1].sortKey))
-    .map(([key, value]) => {
+  return Array.from(allPeriods.entries())
+    .sort((a, b) => a[1].localeCompare(b[1]))
+    .map(([key, sortKey]) => {
+      const value = map.get(key) || {
+        sortKey,
+        zoneSeconds: [0, 0, 0, 0, 0] as [number, number, number, number, number],
+      };
       const total = value.zoneSeconds.reduce((sum, zone) => sum + zone, 0);
       return {
         period: key,

@@ -126,6 +126,10 @@ export default function Dashboard() {
   const availableYears = Array.from(
     new Set(activities.map((a) => new Date(a.start_date_local).getFullYear()))
   ).sort((a, b) => b - a);
+  const yearRangeLabel =
+    availableYears.length > 0
+      ? `${availableYears[availableYears.length - 1]}-${availableYears[0]}`
+      : "År";
 
   const selectedYearActivities = activities.filter(
     (a) => new Date(a.start_date_local).getFullYear() === selectedYear
@@ -142,6 +146,9 @@ export default function Dashboard() {
   const intensity = calculateIntensityFromActivities(graphActivities);
   const typeDistribution = getActivityTypeDistribution(graphActivities);
   const intensityByPeriod = getIntensityPercentageByPeriod(graphActivities, period);
+  const periodsWithoutHrData = intensityByPeriod
+    .filter((item) => item.zone1 + item.zone2 + item.zone3 + item.zone4 + item.zone5 === 0)
+    .map((item) => item.period);
   const trainingEffect = getTrainingEffectOverTime(graphActivities);
   const vo2max = getVO2MaxOverTime(graphActivities, period);
   const trainingLoad = getTrainingLoadByWeek(graphActivities);
@@ -214,7 +221,7 @@ export default function Dashboard() {
           ))}
         </select>
         <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-          {(Object.keys(PERIOD_LABELS) as Array<"week" | "month" | "year">).map((p) => (
+          {(["week", "month"] as Array<"week" | "month">).map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
@@ -226,6 +233,16 @@ export default function Dashboard() {
             </button>
           ))}
         </div>
+        <button
+          onClick={() => setPeriod("year")}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            period === "year"
+              ? "bg-gray-900 text-white"
+              : "bg-gray-100 text-gray-700 hover:text-gray-900"
+          }`}
+        >
+          {yearRangeLabel}
+        </button>
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-8">
@@ -320,7 +337,7 @@ export default function Dashboard() {
         <div className="bg-white border rounded-lg p-4 h-80">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={volumeData}>
-              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} interval={0} />
               <YAxis
                 tickFormatter={
                   volumeMetric === "timer" ? (v) => `${Math.floor(v)}t` : (v) => `${v} km`
@@ -397,11 +414,17 @@ export default function Dashboard() {
             Viser hvor stor andel av tiden i hver {PERIOD_LABELS[period].toLowerCase()} som ble
             tilbrakt i sone 1–5.
           </p>
+          {periodsWithoutHrData.length > 0 && (
+            <p className="text-sm text-amber-700 mt-2">
+              Mangler HR-data for: {periodsWithoutHrData.join(", ")}. Disse vises derfor med 0% i
+              alle soner.
+            </p>
+          )}
         </div>
         <div className="bg-white border rounded-lg p-4 h-80">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={intensityByPeriod}>
-              <XAxis dataKey="period" tick={{ fontSize: 12 }} />
+              <XAxis dataKey="period" tick={{ fontSize: 12 }} interval={0} />
               <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
               <Tooltip
                 formatter={(value, name) => [`${value}%`, String(name)]}
@@ -502,7 +525,7 @@ export default function Dashboard() {
           <div className="bg-white border rounded-lg p-4 h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={trainingEffect}>
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                <XAxis dataKey="date" tick={{ fontSize: 11 }} interval={0} />
                 <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
                 <Tooltip
                   content={({ active, payload, label }) => {
@@ -533,7 +556,7 @@ export default function Dashboard() {
             <div className="bg-white border rounded-lg p-4 h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={vo2max}>
-                  <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} interval={0} />
                   <YAxis domain={["dataMin - 1", "dataMax + 1"]} />
                   <Tooltip formatter={(value) => `${value} ml/kg/min`} />
                   <Line
