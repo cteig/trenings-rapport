@@ -79,15 +79,15 @@ export interface IntensityData {
   minutes: number;
 }
 
-export function calculateIntensityFromActivities(activities: StravaActivity[]): IntensityData[] {
-  const zoneNames = [
-    "Sone 1 (Hvile)",
-    "Sone 2 (Lett)",
-    "Sone 3 (Moderat)",
-    "Sone 4 (Hard)",
-    "Sone 5 (Maks)",
-  ];
+const INTENSITY_ZONE_NAMES = [
+  "Sone 1: <60%",
+  "Sone 2: 60–70%",
+  "Sone 3: 70–80%",
+  "Sone 4: 80–90%",
+  "Sone 5: >90%",
+];
 
+export function calculateIntensityFromActivities(activities: StravaActivity[]): IntensityData[] {
   const hasGarminZones = activities.some((a) => a.hr_time_in_zone_1 != null);
 
   if (hasGarminZones) {
@@ -99,7 +99,7 @@ export function calculateIntensityFromActivities(activities: StravaActivity[]): 
       zones[3] += act.hr_time_in_zone_4 || 0;
       zones[4] += act.hr_time_in_zone_5 || 0;
     }
-    return zoneNames.map((name, i) => ({
+    return INTENSITY_ZONE_NAMES.map((name, i) => ({
       zone: name,
       minutes: Math.round(zones[i] / 60),
     }));
@@ -117,10 +117,74 @@ export function calculateIntensityFromActivities(activities: StravaActivity[]): 
     else zones[4] += minutes;
   }
 
-  return zoneNames.map((name, i) => ({
+  return INTENSITY_ZONE_NAMES.map((name, i) => ({
     zone: name,
     minutes: Math.round(zones[i]),
   }));
+}
+
+export interface IntensityPercentageByPeriod {
+  period: string;
+  zone1: number;
+  zone2: number;
+  zone3: number;
+  zone4: number;
+  zone5: number;
+}
+
+export function getIntensityPercentageByPeriod(
+  activities: StravaActivity[],
+  period: PeriodType
+): IntensityPercentageByPeriod[] {
+  const map = new Map<
+    string,
+    {
+      sortKey: string;
+      zoneSeconds: [number, number, number, number, number];
+    }
+  >();
+
+  for (const act of activities) {
+    const date = new Date(act.start_date_local);
+    const key = getPeriodKey(date, period);
+    const sortKey = getPeriodSortKey(date, period);
+    const entry = map.get(key) || {
+      sortKey,
+      zoneSeconds: [0, 0, 0, 0, 0] as [number, number, number, number, number],
+    };
+
+    if (act.hr_time_in_zone_1 != null) {
+      entry.zoneSeconds[0] += act.hr_time_in_zone_1 || 0;
+      entry.zoneSeconds[1] += act.hr_time_in_zone_2 || 0;
+      entry.zoneSeconds[2] += act.hr_time_in_zone_3 || 0;
+      entry.zoneSeconds[3] += act.hr_time_in_zone_4 || 0;
+      entry.zoneSeconds[4] += act.hr_time_in_zone_5 || 0;
+    } else if (act.has_heartrate && act.average_heartrate && act.max_heartrate) {
+      const ratio = act.average_heartrate / act.max_heartrate;
+      const seconds = act.moving_time;
+      if (ratio < 0.6) entry.zoneSeconds[0] += seconds;
+      else if (ratio < 0.7) entry.zoneSeconds[1] += seconds;
+      else if (ratio < 0.8) entry.zoneSeconds[2] += seconds;
+      else if (ratio < 0.9) entry.zoneSeconds[3] += seconds;
+      else entry.zoneSeconds[4] += seconds;
+    }
+
+    map.set(key, entry);
+  }
+
+  return Array.from(map.entries())
+    .sort((a, b) => a[1].sortKey.localeCompare(b[1].sortKey))
+    .map(([key, value]) => {
+      const total = value.zoneSeconds.reduce((sum, zone) => sum + zone, 0);
+      return {
+        period: key,
+        zone1: total > 0 ? Math.round((value.zoneSeconds[0] / total) * 100) : 0,
+        zone2: total > 0 ? Math.round((value.zoneSeconds[1] / total) * 100) : 0,
+        zone3: total > 0 ? Math.round((value.zoneSeconds[2] / total) * 100) : 0,
+        zone4: total > 0 ? Math.round((value.zoneSeconds[3] / total) * 100) : 0,
+        zone5: total > 0 ? Math.round((value.zoneSeconds[4] / total) * 100) : 0,
+      };
+    });
 }
 
 export function getActivityTypeDistribution(
@@ -175,7 +239,28 @@ export interface VO2MaxPoint {
   vo2max: number;
 }
 
-export function getVO2MaxOverTime(activities: StravaActivity[]): VO2MaxPoint[] {
+export function getVO2MaxOverTime(
+  activities: StravaActivity[],
+  period?: PeriodType
+): VO2MaxPoint[] {
+  if (period === "year") {
+    const yearly = new Map<string, number>();
+
+    const sorted = activities
+      .filter((a) => a.vo2max != null && a.vo2max > 0)
+      .sort((a, b) => a.start_date_local.localeCompare(b.start_date_local));
+
+    for (const activity of sorted) {
+      const year = format(new Date(activity.start_date_local), "yyyy");
+      yearly.set(year, activity.vo2max!);
+    }
+
+    return Array.from(yearly.entries()).map(([date, vo2max]) => ({
+      date,
+      vo2max,
+    }));
+  }
+
   const points: VO2MaxPoint[] = [];
   let lastValue: number | null = null;
 

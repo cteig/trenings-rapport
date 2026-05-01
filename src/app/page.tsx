@@ -17,6 +17,7 @@ import {
   groupActivitiesByPeriod,
   calculateIntensityFromActivities,
   getActivityTypeDistribution,
+  getIntensityPercentageByPeriod,
   getTrainingEffectOverTime,
   getVO2MaxOverTime,
   getTrainingLoadByWeek,
@@ -34,6 +35,7 @@ export default function Dashboard() {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [volumeMetric, setVolumeMetric] = useState<"timer" | "distanse">("timer");
   const [typeMetric, setTypeMetric] = useState<"timer" | "distanse">("timer");
+  const [hiddenActivityTypes, setHiddenActivityTypes] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +46,13 @@ export default function Dashboard() {
     vo2MaxRunning?: number;
     vo2MaxCycling?: number;
   } | null>(null);
+
+  const normalizeDisplayType = (type: string) => {
+    if (type === "cross_country_skiing" || type === "NordicSki" || type === "Ski") {
+      return "Skiing";
+    }
+    return type;
+  };
 
   const fetchActivities = useCallback(async (refresh = false) => {
     setLoading(true);
@@ -118,20 +127,31 @@ export default function Dashboard() {
     new Set(activities.map((a) => new Date(a.start_date_local).getFullYear()))
   ).sort((a, b) => b - a);
 
-  const filteredActivities = activities.filter(
+  const selectedYearActivities = activities.filter(
     (a) => new Date(a.start_date_local).getFullYear() === selectedYear
   );
 
-  const summaries = groupActivitiesByPeriod(filteredActivities, period);
-  const intensity = calculateIntensityFromActivities(filteredActivities);
-  const typeDistribution = getActivityTypeDistribution(filteredActivities);
-  const trainingEffect = getTrainingEffectOverTime(filteredActivities);
-  const vo2max = getVO2MaxOverTime(filteredActivities);
-  const trainingLoad = getTrainingLoadByWeek(filteredActivities);
+  const graphActivities = (period === "year" ? activities : selectedYearActivities).map(
+    (activity) => ({
+      ...activity,
+      type: normalizeDisplayType(activity.type),
+    })
+  );
+
+  const summaries = groupActivitiesByPeriod(graphActivities, period);
+  const intensity = calculateIntensityFromActivities(graphActivities);
+  const typeDistribution = getActivityTypeDistribution(graphActivities);
+  const intensityByPeriod = getIntensityPercentageByPeriod(graphActivities, period);
+  const trainingEffect = getTrainingEffectOverTime(graphActivities);
+  const vo2max = getVO2MaxOverTime(graphActivities, period);
+  const trainingLoad = getTrainingLoadByWeek(graphActivities);
 
   const allActivityTypes = Array.from(
     new Set(summaries.flatMap((s) => Object.keys(s.byType)))
   ).sort();
+  const visibleActivityTypes = allActivityTypes.filter(
+    (type) => !hiddenActivityTypes.includes(type)
+  );
 
   const ACTIVITY_COLORS: Record<string, string> = {
     Run: "#f97316",
@@ -155,7 +175,7 @@ export default function Dashboard() {
 
   const volumeData = summaries.map((s) => {
     const row: Record<string, string | number> = { name: s.period };
-    for (const type of allActivityTypes) {
+    for (const type of visibleActivityTypes) {
       const data = s.byType[type];
       if (volumeMetric === "timer") {
         row[type] = data ? +(data.duration / 60).toFixed(2) : 0;
@@ -211,18 +231,19 @@ export default function Dashboard() {
       <div className="grid grid-cols-3 gap-4 mb-8">
         <div className="bg-white border rounded-lg p-4">
           <p className="text-sm text-gray-500">Aktiviteter i {selectedYear}</p>
-          <p className="text-2xl font-bold">{filteredActivities.length}</p>
+          <p className="text-2xl font-bold">{selectedYearActivities.length}</p>
         </div>
         <div className="bg-white border rounded-lg p-4">
-          <p className="text-sm text-gray-500">Total varighet</p>
+          <p className="text-sm text-gray-500">Total varighet i {selectedYear}</p>
           <p className="text-2xl font-bold">
-            {Math.round(filteredActivities.reduce((sum, a) => sum + a.moving_time / 3600, 0))} timer
+            {Math.round(selectedYearActivities.reduce((sum, a) => sum + a.moving_time / 3600, 0))}{" "}
+            timer
           </p>
         </div>
         <div className="bg-white border rounded-lg p-4">
-          <p className="text-sm text-gray-500">Total distanse</p>
+          <p className="text-sm text-gray-500">Total distanse i {selectedYear}</p>
           <p className="text-2xl font-bold">
-            {Math.round(filteredActivities.reduce((sum, a) => sum + a.distance / 1000, 0))} km
+            {Math.round(selectedYearActivities.reduce((sum, a) => sum + a.distance / 1000, 0))} km
           </p>
         </div>
       </div>
@@ -330,9 +351,68 @@ export default function Dashboard() {
                 }}
               />
               <Legend />
-              {allActivityTypes.map((type, i) => (
-                <Bar key={type} dataKey={type} stackId="a" fill={getColorForType(type, i)} />
-              ))}
+              {allActivityTypes.map((type, i) =>
+                visibleActivityTypes.includes(type) ? (
+                  <Bar key={type} dataKey={type} stackId="a" fill={getColorForType(type, i)} />
+                ) : null
+              )}
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        {allActivityTypes.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {allActivityTypes.map((type, i) => {
+              const hidden = hiddenActivityTypes.includes(type);
+              return (
+                <button
+                  key={type}
+                  onClick={() =>
+                    setHiddenActivityTypes((current) =>
+                      current.includes(type)
+                        ? current.filter((item) => item !== type)
+                        : [...current, type]
+                    )
+                  }
+                  className={`px-3 py-1 rounded-full border text-sm ${
+                    hidden
+                      ? "bg-white text-gray-500 border-gray-300"
+                      : "text-white border-transparent"
+                  }`}
+                  style={hidden ? undefined : { backgroundColor: getColorForType(type, i) }}
+                >
+                  {hidden ? `Vis ${type}` : `Skjul ${type}`}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <section className="mb-8">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold">
+            Intensitetsfordeling per {PERIOD_LABELS[period].toLowerCase()}
+          </h2>
+          <p className="text-sm text-gray-500">
+            Viser hvor stor andel av tiden i hver {PERIOD_LABELS[period].toLowerCase()} som ble
+            tilbrakt i sone 1–5.
+          </p>
+        </div>
+        <div className="bg-white border rounded-lg p-4 h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={intensityByPeriod}>
+              <XAxis dataKey="period" tick={{ fontSize: 12 }} />
+              <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+              <Tooltip
+                formatter={(value, name) => [`${value}%`, String(name)]}
+                labelFormatter={(label) => String(label)}
+              />
+              <Legend />
+              <Bar dataKey="zone1" name="Sone 1: <60%" stackId="zones" fill="#60a5fa" />
+              <Bar dataKey="zone2" name="Sone 2: 60–70%" stackId="zones" fill="#34d399" />
+              <Bar dataKey="zone3" name="Sone 3: 70–80%" stackId="zones" fill="#facc15" />
+              <Bar dataKey="zone4" name="Sone 4: 80–90%" stackId="zones" fill="#fb923c" />
+              <Bar dataKey="zone5" name="Sone 5: >90%" stackId="zones" fill="#f87171" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -396,7 +476,13 @@ export default function Dashboard() {
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold mb-4">Intensitetsfordeling (pulssoner)</h2>
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Intensitetsfordeling (pulssoner)</h2>
+            <p className="text-sm text-gray-500">
+              Garmin leverer tid brukt i sone, men ikke de faktiske pulsgrensene per sone via denne
+              integrasjonen. Derfor vises sonene som generelle nivåer, ikke eksakte bpm-intervaller.
+            </p>
+          </div>
           <div className="bg-white border rounded-lg p-4 h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={intensity} layout="vertical">
