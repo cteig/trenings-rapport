@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   BarChart,
   Bar,
+  CartesianGrid,
   LineChart,
   Line,
   XAxis,
@@ -30,6 +31,7 @@ const PERIOD_LABELS: Record<"week" | "month" | "year", string> = {
 };
 
 export default function Dashboard() {
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   const [activities, setActivities] = useState<StravaActivity[]>([]);
   const [period, setPeriod] = useState<"week" | "month" | "year">("month");
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -48,8 +50,11 @@ export default function Dashboard() {
   } | null>(null);
 
   const normalizeDisplayType = (type: string) => {
+    if (type === "Run") {
+      return "Løping";
+    }
     if (type === "cross_country_skiing" || type === "NordicSki" || type === "Ski") {
-      return "Skiing";
+      return "Ski";
     }
     return type;
   };
@@ -94,13 +99,25 @@ export default function Dashboard() {
   }, [fetchActivities]);
 
   useEffect(() => {
+    const storedTheme = window.localStorage.getItem("theme");
+    const initialTheme = storedTheme === "dark" ? "dark" : "light";
+    setTheme(initialTheme);
+    document.documentElement.dataset.theme = initialTheme;
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  useEffect(() => {
     fetchActivities();
   }, [fetchActivities]);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-lg text-gray-500">Laster...</p>
+        <p className="text-lg text-muted">Laster...</p>
       </div>
     );
   }
@@ -134,6 +151,9 @@ export default function Dashboard() {
   const selectedYearActivities = activities.filter(
     (a) => new Date(a.start_date_local).getFullYear() === selectedYear
   );
+  const selectedYearRunActivities = selectedYearActivities.filter(
+    (activity) => normalizeDisplayType(activity.type) === "Løping"
+  );
 
   const graphActivities = (period === "year" ? activities : selectedYearActivities).map(
     (activity) => ({
@@ -161,24 +181,39 @@ export default function Dashboard() {
   );
 
   const ACTIVITY_COLORS: Record<string, string> = {
-    Run: "#f97316",
+    Løping: "#f97316",
     Ride: "#3b82f6",
+    Sykkel: "#3b82f6",
     Swim: "#06b6d4",
     Walk: "#10b981",
     Hike: "#84cc16",
+    Walking: "#10b981",
     WeightTraining: "#8b5cf6",
+    Styrke: "#8b5cf6",
     Yoga: "#ec4899",
     Workout: "#eab308",
     NordicSki: "#0ea5e9",
+    Ski: "#0ea5e9",
     AlpineSki: "#6366f1",
     RockClimbing: "#f43f5e",
+    Klatring: "#f43f5e",
     VirtualRide: "#2563eb",
     VirtualRun: "#ea580c",
+    Roing: "#14b8a6",
+    Pusteøvelse: "#6b7280",
   };
-  const DEFAULT_COLORS = ["#64748b", "#a855f7", "#14b8a6", "#f59e0b", "#ef4444", "#6b7280"];
 
-  const getColorForType = (type: string, index: number) =>
-    ACTIVITY_COLORS[type] || DEFAULT_COLORS[index % DEFAULT_COLORS.length];
+  const getGeneratedColorForType = (type: string) => {
+    let hash = 0;
+    for (let i = 0; i < type.length; i += 1) {
+      hash = type.charCodeAt(i) + ((hash << 5) - hash);
+    }
+
+    const hue = Math.abs(hash) % 360;
+    return `hsl(${hue} 65% 52%)`;
+  };
+
+  const getColorForType = (type: string) => ACTIVITY_COLORS[type] || getGeneratedColorForType(type);
 
   const volumeData = summaries.map((s) => {
     const row: Record<string, string | number> = { name: s.period };
@@ -200,19 +235,28 @@ export default function Dashboard() {
           {firstName ? `Treningsrapport — ${firstName}` : "Treningsrapport"}
         </h1>
         <div className="flex items-center gap-4">
-          <button onClick={forceRefresh} className="text-sm text-gray-500 hover:text-gray-700">
+          <button
+            onClick={() => setTheme((current) => (current === "light" ? "dark" : "light"))}
+            className="text-sm text-muted hover:opacity-80"
+          >
+            {theme === "light" ? "Dark mode" : "Light mode"}
+          </button>
+          <a href="/wellness" className="text-sm text-muted hover:opacity-80">
+            Wellness
+          </a>
+          <button onClick={forceRefresh} className="text-sm text-muted hover:opacity-80">
             Oppdater data
           </button>
-          <a href="/api/auth/logout" className="text-sm text-gray-500 hover:text-gray-700">
+          <a href="/api/auth/logout" className="text-sm text-muted hover:opacity-80">
             Logg ut
           </a>
         </div>
       </div>
-      <div className="flex items-center gap-4 mb-8">
+      <div className="flex flex-wrap items-center gap-3 mb-8">
         <select
           value={selectedYear}
           onChange={(e) => setSelectedYear(Number(e.target.value))}
-          className="border rounded-lg px-3 py-1.5 text-sm font-medium bg-white"
+          className="surface-card h-10 min-w-[96px] rounded-lg border px-3 text-sm font-semibold shadow-sm"
         >
           {availableYears.map((y) => (
             <option key={y} value={y}>
@@ -220,13 +264,13 @@ export default function Dashboard() {
             </option>
           ))}
         </select>
-        <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+        <div className="surface-muted flex h-10 items-center gap-1 rounded-lg border p-1 shadow-sm">
           {(["week", "month"] as Array<"week" | "month">).map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                period === p ? "bg-white shadow text-gray-900" : "text-gray-600 hover:text-gray-900"
+              className={`h-8 rounded-md px-3 text-sm font-medium transition-colors ${
+                period === p ? "surface-card shadow" : "text-muted hover:opacity-80"
               }`}
             >
               {PERIOD_LABELS[p]}
@@ -235,10 +279,10 @@ export default function Dashboard() {
         </div>
         <button
           onClick={() => setPeriod("year")}
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+          className={`h-10 rounded-lg border px-4 text-sm font-semibold shadow-sm transition-colors ${
             period === "year"
-              ? "bg-gray-900 text-white"
-              : "bg-gray-100 text-gray-700 hover:text-gray-900"
+              ? "border-emerald-600 bg-emerald-600 text-white"
+              : "surface-card text-muted hover:opacity-80"
           }`}
         >
           {yearRangeLabel}
@@ -246,21 +290,65 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="bg-white border rounded-lg p-4">
-          <p className="text-sm text-gray-500">Aktiviteter i {selectedYear}</p>
-          <p className="text-2xl font-bold">{selectedYearActivities.length}</p>
+        <div className="surface-card rounded-xl border p-5">
+          <p className="text-muted text-xs font-semibold uppercase tracking-[0.12em]">
+            Aktiviteter i {selectedYear}
+          </p>
+          <p className="text-foreground mt-2 text-3xl font-bold tracking-tight">
+            {selectedYearActivities.length}
+          </p>
         </div>
-        <div className="bg-white border rounded-lg p-4">
-          <p className="text-sm text-gray-500">Total varighet i {selectedYear}</p>
-          <p className="text-2xl font-bold">
+        <div className="surface-card rounded-xl border p-5">
+          <p className="text-muted text-xs font-semibold uppercase tracking-[0.12em]">
+            Total varighet i {selectedYear}
+          </p>
+          <p className="text-foreground mt-2 text-3xl font-bold tracking-tight">
             {Math.round(selectedYearActivities.reduce((sum, a) => sum + a.moving_time / 3600, 0))}{" "}
             timer
           </p>
         </div>
-        <div className="bg-white border rounded-lg p-4">
-          <p className="text-sm text-gray-500">Total distanse i {selectedYear}</p>
-          <p className="text-2xl font-bold">
+        <div className="surface-card rounded-xl border p-5">
+          <p className="text-muted text-xs font-semibold uppercase tracking-[0.12em]">
+            Total distanse i {selectedYear}
+          </p>
+          <p className="text-foreground mt-2 text-3xl font-bold tracking-tight">
             {Math.round(selectedYearActivities.reduce((sum, a) => sum + a.distance / 1000, 0))} km
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="surface-card rounded-xl border p-5">
+          <p className="text-muted text-xs font-semibold uppercase tracking-[0.12em]">
+            Løpeaktiviteter i {selectedYear}
+          </p>
+          <p className="text-foreground mt-2 text-3xl font-bold tracking-tight">
+            {selectedYearRunActivities.length}
+          </p>
+        </div>
+        <div className="surface-card rounded-xl border p-5">
+          <p className="text-muted text-xs font-semibold uppercase tracking-[0.12em]">
+            Løpetimer i {selectedYear}
+          </p>
+          <p className="text-foreground mt-2 text-3xl font-bold tracking-tight">
+            {Math.round(
+              selectedYearRunActivities.reduce(
+                (sum, activity) => sum + activity.moving_time / 3600,
+                0
+              )
+            )}{" "}
+            timer
+          </p>
+        </div>
+        <div className="surface-card rounded-xl border p-5">
+          <p className="text-muted text-xs font-semibold uppercase tracking-[0.12em]">
+            Løpedistanse i {selectedYear}
+          </p>
+          <p className="text-foreground mt-2 text-3xl font-bold tracking-tight">
+            {Math.round(
+              selectedYearRunActivities.reduce((sum, activity) => sum + activity.distance / 1000, 0)
+            )}{" "}
+            km
           </p>
         </div>
       </div>
@@ -268,38 +356,46 @@ export default function Dashboard() {
       {threshold && (
         <div className="grid grid-cols-4 gap-4 mb-8">
           {threshold.lactateThresholdHR && (
-            <div className="bg-white border rounded-lg p-4">
-              <p className="text-sm text-gray-500">Terskel-puls</p>
-              <p className="text-2xl font-bold">
+            <div className="surface-card rounded-xl border p-5">
+              <p className="text-muted text-xs font-semibold uppercase tracking-[0.12em]">
+                Terskel-puls
+              </p>
+              <p className="text-foreground mt-2 text-3xl font-bold tracking-tight">
                 {threshold.lactateThresholdHR}{" "}
-                <span className="text-sm font-normal text-gray-500">bpm</span>
+                <span className="text-muted text-sm font-medium">bpm</span>
               </p>
             </div>
           )}
           {threshold.lactateThresholdPace && (
-            <div className="bg-white border rounded-lg p-4">
-              <p className="text-sm text-gray-500">Terskeltempo</p>
-              <p className="text-2xl font-bold">
+            <div className="surface-card rounded-xl border p-5">
+              <p className="text-muted text-xs font-semibold uppercase tracking-[0.12em]">
+                Terskeltempo
+              </p>
+              <p className="text-foreground mt-2 text-3xl font-bold tracking-tight">
                 {threshold.lactateThresholdPace}{" "}
-                <span className="text-sm font-normal text-gray-500">/km</span>
+                <span className="text-muted text-sm font-medium">/km</span>
               </p>
             </div>
           )}
           {threshold.vo2MaxRunning && (
-            <div className="bg-white border rounded-lg p-4">
-              <p className="text-sm text-gray-500">VO2max løping</p>
-              <p className="text-2xl font-bold">
+            <div className="surface-card rounded-xl border p-5">
+              <p className="text-muted text-xs font-semibold uppercase tracking-[0.12em]">
+                VO2max løping
+              </p>
+              <p className="text-foreground mt-2 text-3xl font-bold tracking-tight">
                 {threshold.vo2MaxRunning}{" "}
-                <span className="text-sm font-normal text-gray-500">ml/kg/min</span>
+                <span className="text-muted text-sm font-medium">ml/kg/min</span>
               </p>
             </div>
           )}
           {threshold.vo2MaxCycling && (
-            <div className="bg-white border rounded-lg p-4">
-              <p className="text-sm text-gray-500">VO2max sykling</p>
-              <p className="text-2xl font-bold">
+            <div className="surface-card rounded-xl border p-5">
+              <p className="text-muted text-xs font-semibold uppercase tracking-[0.12em]">
+                VO2max sykling
+              </p>
+              <p className="text-foreground mt-2 text-3xl font-bold tracking-tight">
                 {threshold.vo2MaxCycling}{" "}
-                <span className="text-sm font-normal text-gray-500">ml/kg/min</span>
+                <span className="text-muted text-sm font-medium">ml/kg/min</span>
               </p>
             </div>
           )}
@@ -311,13 +407,13 @@ export default function Dashboard() {
           <h2 className="text-lg font-semibold">
             Treningsvolum per {PERIOD_LABELS[period].toLowerCase()}
           </h2>
-          <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+          <div className="surface-muted flex gap-1 rounded-lg border p-1">
             <button
               onClick={() => setVolumeMetric("timer")}
               className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                 volumeMetric === "timer"
-                  ? "bg-white shadow text-gray-900"
-                  : "text-gray-600 hover:text-gray-900"
+                  ? "surface-card shadow text-foreground"
+                  : "text-muted hover:opacity-80"
               }`}
             >
               Timer
@@ -326,19 +422,30 @@ export default function Dashboard() {
               onClick={() => setVolumeMetric("distanse")}
               className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                 volumeMetric === "distanse"
-                  ? "bg-white shadow text-gray-900"
-                  : "text-gray-600 hover:text-gray-900"
+                  ? "surface-card shadow text-foreground"
+                  : "text-muted hover:opacity-80"
               }`}
             >
               Distanse
             </button>
           </div>
         </div>
-        <div className="bg-white border rounded-lg p-4 h-80">
+        <div className="surface-card rounded-xl border p-5 h-80">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={volumeData}>
-              <XAxis dataKey="name" tick={{ fontSize: 12 }} interval={0} />
+              <CartesianGrid vertical={false} className="chart-grid" />
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: 12 }}
+                tickLine={false}
+                axisLine={false}
+                className="chart-axis"
+                interval={0}
+              />
               <YAxis
+                tickLine={false}
+                axisLine={false}
+                className="chart-axis"
                 tickFormatter={
                   volumeMetric === "timer" ? (v) => `${Math.floor(v)}t` : (v) => `${v} km`
                 }
@@ -349,8 +456,8 @@ export default function Dashboard() {
                   const items = payload.filter((p) => Number(p.value) > 0);
                   if (items.length === 0) return null;
                   return (
-                    <div className="bg-white border rounded-lg shadow-sm p-2 text-sm">
-                      <p className="font-medium mb-1">{label}</p>
+                    <div className="surface-tooltip rounded-lg p-2 text-sm">
+                      <p className="text-foreground font-medium mb-1">{label}</p>
                       {items.map((item) => {
                         const v = Number(item.value);
                         const formatted =
@@ -370,7 +477,7 @@ export default function Dashboard() {
               <Legend />
               {allActivityTypes.map((type, i) =>
                 visibleActivityTypes.includes(type) ? (
-                  <Bar key={type} dataKey={type} stackId="a" fill={getColorForType(type, i)} />
+                  <Bar key={type} dataKey={type} stackId="a" fill={getColorForType(type)} />
                 ) : null
               )}
             </BarChart>
@@ -391,11 +498,9 @@ export default function Dashboard() {
                     )
                   }
                   className={`px-3 py-1 rounded-full border text-sm ${
-                    hidden
-                      ? "bg-white text-gray-500 border-gray-300"
-                      : "text-white border-transparent"
+                    hidden ? "surface-card text-muted" : "text-white border-transparent"
                   }`}
-                  style={hidden ? undefined : { backgroundColor: getColorForType(type, i) }}
+                  style={hidden ? undefined : { backgroundColor: getColorForType(type) }}
                 >
                   {hidden ? `Vis ${type}` : `Skjul ${type}`}
                 </button>
@@ -410,7 +515,7 @@ export default function Dashboard() {
           <h2 className="text-lg font-semibold">
             Intensitetsfordeling per {PERIOD_LABELS[period].toLowerCase()}
           </h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-muted text-sm">
             Viser hvor stor andel av tiden i hver {PERIOD_LABELS[period].toLowerCase()} som ble
             tilbrakt i sone 1–5.
           </p>
@@ -421,11 +526,25 @@ export default function Dashboard() {
             </p>
           )}
         </div>
-        <div className="bg-white border rounded-lg p-4 h-80">
+        <div className="surface-card rounded-xl border p-5 h-80">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={intensityByPeriod}>
-              <XAxis dataKey="period" tick={{ fontSize: 12 }} interval={0} />
-              <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+              <CartesianGrid vertical={false} className="chart-grid" />
+              <XAxis
+                dataKey="period"
+                tick={{ fontSize: 12 }}
+                tickLine={false}
+                axisLine={false}
+                className="chart-axis"
+                interval={0}
+              />
+              <YAxis
+                domain={[0, 100]}
+                tickFormatter={(v) => `${v}%`}
+                tickLine={false}
+                axisLine={false}
+                className="chart-axis"
+              />
               <Tooltip
                 formatter={(value, name) => [`${value}%`, String(name)]}
                 labelFormatter={(label) => String(label)}
@@ -445,13 +564,13 @@ export default function Dashboard() {
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">Fordeling per type</h2>
-            <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+            <div className="surface-muted flex gap-1 rounded-lg border p-1">
               <button
                 onClick={() => setTypeMetric("timer")}
                 className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                   typeMetric === "timer"
-                    ? "bg-white shadow text-gray-900"
-                    : "text-gray-600 hover:text-gray-900"
+                    ? "surface-card shadow text-foreground"
+                    : "text-muted hover:opacity-80"
                 }`}
               >
                 Timer
@@ -460,21 +579,36 @@ export default function Dashboard() {
                 onClick={() => setTypeMetric("distanse")}
                 className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                   typeMetric === "distanse"
-                    ? "bg-white shadow text-gray-900"
-                    : "text-gray-600 hover:text-gray-900"
+                    ? "surface-card shadow text-foreground"
+                    : "text-muted hover:opacity-80"
                 }`}
               >
                 Distanse
               </button>
             </div>
           </div>
-          <div className="bg-white border rounded-lg p-4 h-80">
+          <div className="surface-card rounded-xl border p-5 h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={typeDistribution} layout="vertical">
                 {typeMetric === "timer" ? (
                   <>
-                    <XAxis type="number" tickFormatter={(v) => `${Math.floor(v / 60)}t`} />
-                    <YAxis dataKey="type" type="category" tick={{ fontSize: 12 }} width={100} />
+                    <CartesianGrid horizontal={false} className="chart-grid" />
+                    <XAxis
+                      type="number"
+                      tickFormatter={(v) => `${Math.floor(v / 60)}t`}
+                      tickLine={false}
+                      axisLine={false}
+                      className="chart-axis"
+                    />
+                    <YAxis
+                      dataKey="type"
+                      type="category"
+                      tick={{ fontSize: 12 }}
+                      width={100}
+                      tickLine={false}
+                      axisLine={false}
+                      className="chart-axis"
+                    />
                     <Tooltip
                       formatter={(value) => {
                         const v = Number(value);
@@ -487,8 +621,23 @@ export default function Dashboard() {
                   </>
                 ) : (
                   <>
-                    <XAxis type="number" tickFormatter={(v) => `${v} km`} />
-                    <YAxis dataKey="type" type="category" tick={{ fontSize: 12 }} width={100} />
+                    <CartesianGrid horizontal={false} className="chart-grid" />
+                    <XAxis
+                      type="number"
+                      tickFormatter={(v) => `${v} km`}
+                      tickLine={false}
+                      axisLine={false}
+                      className="chart-axis"
+                    />
+                    <YAxis
+                      dataKey="type"
+                      type="category"
+                      tick={{ fontSize: 12 }}
+                      width={100}
+                      tickLine={false}
+                      axisLine={false}
+                      className="chart-axis"
+                    />
                     <Tooltip formatter={(value) => `${Number(value).toFixed(1)} km`} />
                     <Bar dataKey="km" fill="#3b82f6" />
                   </>
@@ -501,16 +650,31 @@ export default function Dashboard() {
         <section>
           <div className="mb-4">
             <h2 className="text-lg font-semibold">Intensitetsfordeling (pulssoner)</h2>
-            <p className="text-sm text-gray-500">
+            <p className="text-muted text-sm">
               Garmin leverer tid brukt i sone, men ikke de faktiske pulsgrensene per sone via denne
               integrasjonen. Derfor vises sonene som generelle nivåer, ikke eksakte bpm-intervaller.
             </p>
           </div>
-          <div className="bg-white border rounded-lg p-4 h-80">
+          <div className="surface-card rounded-xl border p-5 h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={intensity} layout="vertical">
-                <XAxis type="number" tickFormatter={(v) => `${v} min`} />
-                <YAxis dataKey="zone" type="category" tick={{ fontSize: 11 }} width={120} />
+                <CartesianGrid horizontal={false} className="chart-grid" />
+                <XAxis
+                  type="number"
+                  tickFormatter={(v) => `${v} min`}
+                  tickLine={false}
+                  axisLine={false}
+                  className="chart-axis"
+                />
+                <YAxis
+                  dataKey="zone"
+                  type="category"
+                  tick={{ fontSize: 11 }}
+                  width={120}
+                  tickLine={false}
+                  axisLine={false}
+                  className="chart-axis"
+                />
                 <Tooltip formatter={(value) => `${value} min`} />
                 <Bar dataKey="minutes" fill="#3b82f6" />
               </BarChart>
@@ -522,18 +686,32 @@ export default function Dashboard() {
       {trainingEffect.length > 0 && (
         <section className="mb-8">
           <h2 className="text-lg font-semibold mb-4">Treningseffekt (aerob vs anaerob)</h2>
-          <div className="bg-white border rounded-lg p-4 h-80">
+          <div className="surface-card rounded-xl border p-5 h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={trainingEffect}>
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} interval={0} />
-                <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+                <CartesianGrid vertical={false} className="chart-grid" />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={false}
+                  className="chart-axis"
+                  interval={0}
+                />
+                <YAxis
+                  domain={[0, 100]}
+                  tickFormatter={(v) => `${v}%`}
+                  tickLine={false}
+                  axisLine={false}
+                  className="chart-axis"
+                />
                 <Tooltip
                   content={({ active, payload, label }) => {
                     if (!active || !payload || !payload.length) return null;
                     const item = payload[0]?.payload;
                     return (
-                      <div className="bg-white border rounded-lg shadow-sm p-2 text-sm">
-                        <p className="font-medium">{item?.name || label}</p>
+                      <div className="surface-tooltip rounded-lg p-2 text-sm">
+                        <p className="text-foreground font-medium">{item?.name || label}</p>
                         <p style={{ color: "#10b981" }}>Aerob: {item?.aerobic}%</p>
                         <p style={{ color: "#f97316" }}>Anaerob: {item?.anaerobic}%</p>
                       </div>
@@ -553,11 +731,24 @@ export default function Dashboard() {
         {vo2max.length > 1 && (
           <section>
             <h2 className="text-lg font-semibold mb-4">VO2max-utvikling</h2>
-            <div className="bg-white border rounded-lg p-4 h-80">
+            <div className="surface-card rounded-xl border p-5 h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={vo2max}>
-                  <XAxis dataKey="date" tick={{ fontSize: 11 }} interval={0} />
-                  <YAxis domain={["dataMin - 1", "dataMax + 1"]} />
+                  <CartesianGrid vertical={false} className="chart-grid" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={false}
+                    className="chart-axis"
+                    interval={0}
+                  />
+                  <YAxis
+                    domain={["dataMin - 1", "dataMax + 1"]}
+                    tickLine={false}
+                    axisLine={false}
+                    className="chart-axis"
+                  />
                   <Tooltip formatter={(value) => `${value} ml/kg/min`} />
                   <Line
                     type="monotone"
@@ -578,16 +769,23 @@ export default function Dashboard() {
         <section className="mb-8">
           <div className="mb-4">
             <h2 className="text-lg font-semibold">Treningsbelastning per uke</h2>
-            <p className="text-sm text-gray-500">
+            <p className="text-muted text-sm">
               Basert på EPOC — kombinerer varighet og intensitet (puls) for å estimere hvor mye
               kroppen må restituere etter hver økt.
             </p>
           </div>
-          <div className="bg-white border rounded-lg p-4 h-80">
+          <div className="surface-card rounded-xl border p-5 h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={trainingLoad}>
-                <XAxis dataKey="week" tick={{ fontSize: 12 }} />
-                <YAxis />
+                <CartesianGrid vertical={false} className="chart-grid" />
+                <XAxis
+                  dataKey="week"
+                  tick={{ fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                  className="chart-axis"
+                />
+                <YAxis tickLine={false} axisLine={false} className="chart-axis" />
                 <Tooltip formatter={(value) => `${value}`} />
                 <Bar dataKey="load" name="Belastning" fill="#8b5cf6" />
               </BarChart>
@@ -632,16 +830,19 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+    <div className="flex flex-col items-center justify-center min-h-screen gap-4 px-4">
       <h1 className="text-2xl font-bold">Treningsrapport</h1>
-      <p className="text-gray-600">Logg inn med Garmin Connect</p>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3 w-80">
+      <p className="text-muted">Logg inn med Garmin Connect</p>
+      <form
+        onSubmit={handleSubmit}
+        className="surface-card w-80 rounded-2xl border p-5 flex flex-col gap-3"
+      >
         <input
           type="email"
           placeholder="E-post"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="border rounded-lg px-4 py-2"
+          className="surface-card rounded-lg border px-4 py-2 text-foreground placeholder:text-muted"
           required
         />
         <input
@@ -649,7 +850,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
           placeholder="Passord"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="border rounded-lg px-4 py-2"
+          className="surface-card rounded-lg border px-4 py-2 text-foreground placeholder:text-muted"
           required
         />
         {loginError && <p className="text-red-500 text-sm">{loginError}</p>}
