@@ -1,21 +1,9 @@
 import { format } from "date-fns";
+import type { WellnessDay } from "@/types/wellness";
 
-export interface WellnessDay {
-  date: string;
-  sleepSeconds: number;
-  deepSleepSeconds: number;
-  lightSleepSeconds: number;
-  remSleepSeconds: number;
-  awakeSleepSeconds: number;
-  sleepScore?: number;
-  avgSleepStress?: number;
-  avgOvernightHrv?: number;
-  hrvStatus?: string;
-  restingHeartRate?: number;
-  bodyBatteryChange?: number;
-  averageRespiration?: number;
-  maxHeartRate?: number;
-  minHeartRate?: number;
+function formatChartDate(dateString: string) {
+  const [year, month, day] = dateString.split("-").map(Number);
+  return format(new Date(year, month - 1, day), "dd.MM");
 }
 
 export function formatSleepHours(seconds: number) {
@@ -26,7 +14,7 @@ export function formatSleepHours(seconds: number) {
 
 export function getSleepChartData(days: WellnessDay[]) {
   return days.map((day) => ({
-    date: format(new Date(day.date), "dd.MM"),
+    date: formatChartDate(day.date),
     sleepHours: +(day.sleepSeconds / 3600).toFixed(1),
     deepHours: +(day.deepSleepSeconds / 3600).toFixed(1),
     remHours: +(day.remSleepSeconds / 3600).toFixed(1),
@@ -36,7 +24,7 @@ export function getSleepChartData(days: WellnessDay[]) {
 
 export function getRecoveryChartData(days: WellnessDay[]) {
   return days.map((day) => ({
-    date: format(new Date(day.date), "dd.MM"),
+    date: formatChartDate(day.date),
     hrv: day.avgOvernightHrv ?? null,
     restingHeartRate: day.restingHeartRate ?? null,
     sleepScore: day.sleepScore ?? null,

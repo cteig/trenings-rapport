@@ -14,12 +14,12 @@ import {
   YAxis,
 } from "recharts";
 import {
-  WellnessDay,
   formatSleepHours,
   getRecoveryChartData,
   getSleepChartData,
   getWellnessSummary,
 } from "@/lib/wellness";
+import type { WellnessDay } from "@/types/wellness";
 
 export default function WellnessPage() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -124,7 +124,7 @@ export default function WellnessPage() {
             {firstName ? `Wellness — ${firstName}` : "Wellness"}
           </h1>
           <p className="text-muted text-sm mt-1">
-            HRV, søvn, stress og hvilepuls for siste 30 dager
+            HRV, søvn, stress og hvilepuls for siste {rangeDays} dager
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -284,12 +284,23 @@ export default function WellnessPage() {
         </section>
       </div>
 
-      <div className="grid grid-cols-2 gap-8">
-        <section>
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold">Sleep score og søvnstress</h2>
-            <p className="text-muted text-sm">
-              Kvalitetsscore og gjennomsnittlig stress i søvnperioden.
+      <section>
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold">Sleep score og søvnstress</h2>
+          <p className="text-muted text-sm">
+            Kvalitetsscore og gjennomsnittlig stress i søvnperioden.
+          </p>
+        </div>
+        <div className="grid grid-cols-[220px_1fr] gap-4">
+          <div className="surface-card rounded-xl border p-5">
+            <p className="text-muted text-xs font-semibold uppercase tracking-[0.12em]">
+              Snitt sleep score
+            </p>
+            <p className="text-foreground mt-2 text-3xl font-bold tracking-tight">
+              {summary.avgSleepScore ?? "–"}
+            </p>
+            <p className="text-muted text-sm mt-3">
+              Basert på de siste {rangeDays} dagene med score-data.
             </p>
           </div>
           <div className="surface-card rounded-xl border p-5 h-96">
@@ -325,24 +336,8 @@ export default function WellnessPage() {
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </section>
-        <section>
-          <div className="surface-card rounded-xl border p-5 h-full flex items-center justify-center">
-            <div className="text-center max-w-md">
-              <p className="text-muted text-xs font-semibold uppercase tracking-[0.12em]">
-                HRV-status
-              </p>
-              <p className="text-foreground mt-3 text-4xl font-bold tracking-tight">
-                {summary.latestHrvStatus || "Ingen data"}
-              </p>
-              <p className="text-muted text-sm mt-4">
-                Garmin rapporterer HRV-status som del av søvndataene, så dette oppdateres bare når
-                det finnes overnight-målinger.
-              </p>
-            </div>
-          </div>
-        </section>
-      </div>
+        </div>
+      </section>
     </main>
   );
 }
