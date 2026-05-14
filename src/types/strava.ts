@@ -31,6 +31,7 @@ export interface StravaActivity {
   hr_time_in_zone_3?: number; // seconds
   hr_time_in_zone_4?: number; // seconds
   hr_time_in_zone_5?: number; // seconds
+  comment?: string;
 }
 
 export interface StravaHeartRateZone {

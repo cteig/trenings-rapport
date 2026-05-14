@@ -42,7 +42,15 @@ function formatDate(dateStr: string): string {
   });
 }
 
-function ActivityDetails({ activity }: { activity: StravaActivity }) {
+function ActivityDetails({
+  activity,
+  comment,
+  onCommentChange,
+}: {
+  activity: StravaActivity;
+  comment?: string;
+  onCommentChange: (comment: string | null) => void;
+}) {
   const hasZones =
     activity.hr_time_in_zone_1 ||
     activity.hr_time_in_zone_2 ||
@@ -145,6 +153,20 @@ function ActivityDetails({ activity }: { activity: StravaActivity }) {
           </div>
         </div>
       )}
+
+      <div className="col-span-full mt-3 pt-3 border-t">
+        <label className="text-muted text-xs font-medium block mb-1">Kommentar</label>
+        <textarea
+          className="w-full text-sm rounded-lg border surface-card px-3 py-2 resize-none focus:outline-none focus:ring-1"
+          rows={2}
+          placeholder="Legg til en kommentar..."
+          defaultValue={comment ?? ""}
+          onBlur={(e) => {
+            const val = e.target.value.trim();
+            if (val !== (comment ?? "")) onCommentChange(val || null);
+          }}
+        />
+      </div>
     </div>
   );
 }
@@ -156,6 +178,7 @@ export default function AktiviteterPage() {
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [comments, setComments] = useState<Record<number, string>>({});
 
   const fetchActivities = useCallback(async () => {
     setLoading(true);
@@ -172,14 +195,31 @@ export default function AktiviteterPage() {
       setLoading(false);
       return;
     }
-    const data: StravaActivity[] = await res.json();
+    const data: (StravaActivity & { comment?: string })[] = await res.json();
     data.sort(
       (a, b) => new Date(b.start_date_local).getTime() - new Date(a.start_date_local).getTime()
     );
     setAllActivities(data);
+    const commentMap: Record<number, string> = {};
+    data.forEach((a) => { if (a.comment) commentMap[a.id] = a.comment; });
+    setComments(commentMap);
     setAuthenticated(true);
     setLoading(false);
   }, []);
+
+  const handleCommentChange = async (activityId: number, comment: string | null) => {
+    await fetch(`/api/activities/${activityId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ comment }),
+    });
+    setComments((prev) => {
+      const next = { ...prev };
+      if (comment) next[activityId] = comment;
+      else delete next[activityId];
+      return next;
+    });
+  };
 
   useEffect(() => {
     fetchActivities();
@@ -289,7 +329,11 @@ export default function AktiviteterPage() {
                       className="border-b bg-black/[0.02] dark:bg-white/[0.02]"
                     >
                       <td colSpan={7}>
-                        <ActivityDetails activity={activity} />
+                        <ActivityDetails
+                          activity={activity}
+                          comment={comments[activity.id]}
+                          onCommentChange={(c) => handleCommentChange(activity.id, c)}
+                        />
                       </td>
                     </tr>,
                   ];

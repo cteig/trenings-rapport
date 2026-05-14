@@ -17,8 +17,50 @@ model User {
   wellness           String?
   wellnessCachedAt   DateTime?
   thresholdSnapshots ThresholdSnapshot[]
+  activityRows       Activity[]
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
+}
+
+model Activity {
+  id                      Int       @id @default(autoincrement())
+  userId                  Int
+  garminId                String
+  name                    String
+  type                    String
+  startDate               String
+  startDateLocal          String
+  elapsedTime             Int
+  movingTime              Int
+  distance                Float
+  totalElevationGain      Float
+  elevationLoss           Float?
+  averageSpeed            Float
+  maxSpeed                Float
+  averageHeartrate        Float?
+  maxHeartrate            Float?
+  hasHeartrate            Boolean   @default(false)
+  sufferScore             Float?
+  calories                Float?
+  aerobicTrainingEffect   Float?
+  anaerobicTrainingEffect Float?
+  vo2max                  Float?
+  trainingLoad            Float?
+  avgRunningCadence       Float?
+  avgStrideLength         Float?
+  avgGroundContactTime    Float?
+  avgVerticalOscillation  Float?
+  hrTimeInZone1           Float?
+  hrTimeInZone2           Float?
+  hrTimeInZone3           Float?
+  hrTimeInZone4           Float?
+  hrTimeInZone5           Float?
+  comment                 String?
+  syncedAt                DateTime  @default(now())
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, garminId])
+  @@index([userId, startDateLocal])
 }
 
 model ThresholdSnapshot {
