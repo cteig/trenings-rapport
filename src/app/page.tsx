@@ -385,6 +385,9 @@ export default function Dashboard() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">
             Treningsvolum per {PERIOD_LABELS[period].toLowerCase()}
+            {period !== "year" && (
+              <span className="text-muted text-sm font-normal ml-2">{selectedYear}</span>
+            )}
           </h2>
           <div className="surface-muted flex gap-1 rounded-lg border p-1">
             <button
@@ -420,6 +423,12 @@ export default function Dashboard() {
                 axisLine={false}
                 className="chart-axis"
                 interval={0}
+                tickFormatter={(value: string) => {
+                  if (period === "year") return value;
+                  if (period === "month") return value.split(" ")[0].slice(0, 3);
+                  // "Uke 23, 2025" → "23"
+                  return value.split(" ")[1]?.replace(",", "") ?? value;
+                }}
               />
               <YAxis
                 tickLine={false}
