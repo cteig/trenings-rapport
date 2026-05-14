@@ -548,6 +548,42 @@ export default function Dashboard() {
         </div>
       </section>
 
+      {vo2max.length > 1 && (
+        <section className="mb-8">
+          <h2 className="text-lg font-semibold mb-4">VO2max-utvikling</h2>
+          <div className="surface-card rounded-xl border p-5 h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={vo2max}>
+                <CartesianGrid vertical={false} className="chart-grid" />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={false}
+                  className="chart-axis"
+                  interval={0}
+                />
+                <YAxis
+                  domain={["dataMin - 1", "dataMax + 1"]}
+                  tickLine={false}
+                  axisLine={false}
+                  className="chart-axis"
+                />
+                <Tooltip formatter={(value) => `${value} ml/kg/min`} />
+                <Line
+                  type="monotone"
+                  dataKey="vo2max"
+                  name="VO2max"
+                  stroke="#6366f1"
+                  strokeWidth={2}
+                  dot={{ r: 4 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         <section>
           <div className="mb-4">
@@ -715,43 +751,6 @@ export default function Dashboard() {
         </section>
       )}
 
-      <div className="grid grid-cols-2 gap-8 mb-8">
-        {vo2max.length > 1 && (
-          <section>
-            <h2 className="text-lg font-semibold mb-4">VO2max-utvikling</h2>
-            <div className="surface-card rounded-xl border p-5 h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={vo2max}>
-                  <CartesianGrid vertical={false} className="chart-grid" />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fontSize: 11 }}
-                    tickLine={false}
-                    axisLine={false}
-                    className="chart-axis"
-                    interval={0}
-                  />
-                  <YAxis
-                    domain={["dataMin - 1", "dataMax + 1"]}
-                    tickLine={false}
-                    axisLine={false}
-                    className="chart-axis"
-                  />
-                  <Tooltip formatter={(value) => `${value} ml/kg/min`} />
-                  <Line
-                    type="monotone"
-                    dataKey="vo2max"
-                    name="VO2max"
-                    stroke="#6366f1"
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </section>
-        )}
-      </div>
 
       {trainingLoad.length > 0 && (
         <section className="mb-8">
