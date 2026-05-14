@@ -53,6 +53,52 @@ That is a better fit than the very smallest server for this app's build/runtime 
 export UPCLOUD_TOKEN="your-api-token"
 ```
 
+## If SSH stops working after deploy
+
+The most common cause is that your public IP has changed since the last `terraform apply`. The firewall only allows the IP stored in `terraform.tfvars`.
+
+Check your current IP and update the file:
+
+```bash
+curl -s https://checkip.amazonaws.com
+# Then edit terraform.tfvars: ssh_allowed_cidr = "<your-ip>/32"
+export UPCLOUD_TOKEN="your-api-token"
+terraform apply
+```
+
+## npm dependency rules for this project
+
+The deploy script runs `npm ci` under the app user's login shell, which has `NODE_ENV=production` set. This means **devDependencies are not installed on the server**.
+
+Any package needed at build time or by Prisma must be in `dependencies`, not `devDependencies`. This includes:
+
+- `prisma` — needed for `migrate deploy` and `generate`
+- `@prisma/client` — needed at runtime and during `generate`
+- `tailwindcss` and `@tailwindcss/postcss` — needed by the Next.js build
+- `typescript` — needed by the Next.js TypeScript check
+
+Keep test-only packages (`vitest`, `@vitejs/plugin-react`) in `devDependencies`.
+
+Also make sure `vitest.config.ts` and test files are excluded in `tsconfig.json`, so the TypeScript build step does not try to resolve vitest types:
+
+```json
+"exclude": ["node_modules", "vitest.config.ts", "**/*.test.ts", "**/*.test.tsx"]
+```
+
+## Notes on prisma.config.ts
+
+`prisma.config.ts` must not import `dotenv/config`. The deploy script sources `/etc/trenings-rapport.env` before running Prisma, so `DATABASE_URL` is already in the environment. A plain config without the dotenv import is sufficient:
+
+```ts
+import { defineConfig } from "prisma/config";
+
+export default defineConfig({
+  schema: "prisma/schema.prisma",
+  migrations: { path: "prisma/migrations" },
+  datasource: { url: process.env["DATABASE_URL"] },
+});
+```
+
 ## Usage
 
 ```bash
