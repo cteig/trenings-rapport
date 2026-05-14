@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   }
 
   const daysParam = Number(request.nextUrl.searchParams.get("days") || "30");
-  const days = Number.isFinite(daysParam) ? Math.min(Math.max(daysParam, 7), 90) : 30;
+  const days = Number.isFinite(daysParam) ? Math.min(Math.max(daysParam, 1), 90) : 30;
   const forceRefresh = request.nextUrl.searchParams.get("refresh") === "1";
   const user = await prisma.user.findUnique({ where: { email } });
 
