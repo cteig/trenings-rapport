@@ -1,4 +1,4 @@
-const CACHE = "trenings-rapport-v1";
+const CACHE = "trenings-rapport-v2";
 
 const PRECACHE = ["/", "/aktiviteter", "/wellness"];
 

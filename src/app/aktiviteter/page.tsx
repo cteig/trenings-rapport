@@ -193,7 +193,7 @@ export default function AktiviteterPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center flex-1 py-24">
         <p className="text-lg text-muted">Laster aktiviteter...</p>
       </div>
     );
@@ -201,9 +201,9 @@ export default function AktiviteterPage() {
 
   if (authenticated === false) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+      <div className="flex flex-col items-center justify-center flex-1 gap-4 py-24">
         <p className="text-muted">Du må logge inn først.</p>
-        <a href="/" className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">
+        <a href="/" className="surface-card rounded-lg border px-4 py-2 text-sm font-medium">
           Gå til innlogging
         </a>
       </div>
@@ -212,11 +212,11 @@ export default function AktiviteterPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+      <div className="flex flex-col items-center justify-center flex-1 gap-4 py-24">
         <p className="text-red-500">{error}</p>
         <button
           onClick={fetchActivities}
-          className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+          className="surface-card rounded-lg border px-4 py-2 text-sm font-medium"
         >
           Prøv igjen
         </button>
@@ -229,9 +229,7 @@ export default function AktiviteterPage() {
 
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Aktiviteter</h1>
-      </div>
+      <h1 className="text-2xl font-bold mb-6">Aktiviteter</h1>
 
       <p className="text-muted text-sm mb-4">
         Viser {visible.length} av {allActivities.length} aktiviteter

@@ -109,7 +109,7 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center flex-1 py-24">
         <p className="text-lg text-muted">Laster...</p>
       </div>
     );
@@ -121,11 +121,11 @@ export default function Dashboard() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+      <div className="flex flex-col items-center justify-center flex-1 gap-4 py-24">
         <p className="text-red-500">{error}</p>
         <button
           onClick={() => fetchActivities()}
-          className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+          className="surface-card rounded-lg border px-4 py-2 text-sm font-medium"
         >
           Prøv igjen
         </button>

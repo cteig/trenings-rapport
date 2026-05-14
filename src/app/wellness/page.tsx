@@ -86,7 +86,7 @@ export default function WellnessPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center flex-1 py-24">
         <p className="text-lg text-muted">Laster wellness-data...</p>
       </div>
     );
@@ -94,7 +94,7 @@ export default function WellnessPage() {
 
   if (authenticated === false) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4 px-4">
+      <div className="flex flex-col items-center justify-center flex-1 gap-4 px-4 py-24">
         <p className="text-muted">Du må logge inn for å se wellness-data.</p>
         <Link href="/" className="surface-card rounded-lg border px-4 py-2 text-sm font-medium">
           Gå til innlogging
@@ -105,7 +105,7 @@ export default function WellnessPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4 px-4">
+      <div className="flex flex-col items-center justify-center flex-1 gap-4 px-4 py-24">
         <p className="text-red-500">{error}</p>
         <Link href="/" className="surface-card rounded-lg border px-4 py-2 text-sm font-medium">
           Tilbake til dashboard
@@ -116,15 +116,13 @@ export default function WellnessPage() {
 
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="text-2xl font-bold">
-            {firstName ? `Wellness — ${firstName}` : "Wellness"}
-          </h1>
-          <p className="text-muted text-sm mt-1">
-            HRV, søvn, stress og hvilepuls for {rangeDays === 1 ? "siste døgn" : `siste ${rangeDays} dager`}
-          </p>
-        </div>
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold">
+          {firstName ? `Wellness — ${firstName}` : "Wellness"}
+        </h1>
+        <p className="text-muted text-sm mt-1">
+          HRV, søvn, stress og hvilepuls for {rangeDays === 1 ? "siste døgn" : `siste ${rangeDays} dager`}
+        </p>
       </div>
 
       <div className="surface-muted mb-8 inline-flex gap-1 rounded-xl border p-1">
@@ -143,13 +141,13 @@ export default function WellnessPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-8 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         <section>
           <div className="mb-4">
             <h2 className="text-lg font-semibold">Søvn per natt</h2>
             <p className="text-muted text-sm">Timer fordelt på lett søvn, dyp søvn og REM.</p>
           </div>
-          <div className="grid grid-cols-[220px_1fr] gap-4">
+          <div className="flex flex-col sm:grid sm:grid-cols-[200px_1fr] gap-4">
             <div className="surface-card rounded-xl border p-5">
               <p className="text-muted text-xs font-semibold uppercase tracking-[0.12em]">
                 Snitt søvn
@@ -161,7 +159,7 @@ export default function WellnessPage() {
                 Basert på {rangeDays === 1 ? "siste døgn" : `de siste ${rangeDays} dagene`} med søvndata.
               </p>
             </div>
-            <div className="surface-card rounded-xl border p-5 h-96">
+            <div className="surface-card rounded-xl border p-5 h-72 sm:h-96">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={sleepChartData}>
                   <CartesianGrid vertical={false} className="chart-grid" />
@@ -194,7 +192,7 @@ export default function WellnessPage() {
             <h2 className="text-lg font-semibold">HRV og hvilepuls</h2>
             <p className="text-muted text-sm">Utvikling i overnight HRV og resting heart rate.</p>
           </div>
-          <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-3 gap-3 mb-4">
             <div className="surface-card rounded-xl border p-5">
               <p className="text-muted text-xs font-semibold uppercase tracking-[0.12em]">
                 Snitt HRV
@@ -220,7 +218,7 @@ export default function WellnessPage() {
               </p>
             </div>
           </div>
-          <div className="surface-card rounded-xl border p-5 h-96">
+          <div className="surface-card rounded-xl border p-5 h-72 sm:h-96">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={recoveryChartData}>
                 <CartesianGrid vertical={false} className="chart-grid" />
@@ -272,7 +270,7 @@ export default function WellnessPage() {
             Kvalitetsscore og gjennomsnittlig stress i søvnperioden.
           </p>
         </div>
-        <div className="grid grid-cols-[220px_1fr] gap-4">
+        <div className="flex flex-col sm:grid sm:grid-cols-[200px_1fr] gap-4">
           <div className="surface-card rounded-xl border p-5">
             <p className="text-muted text-xs font-semibold uppercase tracking-[0.12em]">
               Snitt sleep score
@@ -284,7 +282,7 @@ export default function WellnessPage() {
               Basert på {rangeDays === 1 ? "siste døgn" : `de siste ${rangeDays} dagene`} med score-data.
             </p>
           </div>
-          <div className="surface-card rounded-xl border p-5 h-96">
+          <div className="surface-card rounded-xl border p-5 h-72 sm:h-96">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={recoveryChartData}>
                 <CartesianGrid vertical={false} className="chart-grid" />
