@@ -333,7 +333,7 @@ export default function Dashboard() {
       </div>
 
       {threshold && (
-        <div className="grid grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-flow-col auto-cols-fr gap-4 mb-8">
           {threshold.lactateThresholdHR && (
             <div className="surface-card rounded-xl border p-5">
               <p className="text-muted text-xs font-semibold uppercase tracking-[0.12em]">
