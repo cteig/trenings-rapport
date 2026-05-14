@@ -548,7 +548,42 @@ export default function Dashboard() {
         </div>
       </section>
 
-      <div className="grid grid-cols-2 gap-8 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <section>
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Intensitetsfordeling (pulssoner)</h2>
+            <p className="text-muted text-sm">
+              Garmin leverer tid brukt i sone, men ikke de faktiske pulsgrensene per sone via denne
+              integrasjonen. Derfor vises sonene som generelle nivåer, ikke eksakte bpm-intervaller.
+            </p>
+          </div>
+          <div className="surface-card rounded-xl border p-5 h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={intensity} layout="vertical">
+                <CartesianGrid horizontal={false} className="chart-grid" />
+                <XAxis
+                  type="number"
+                  tickFormatter={(v) => `${v} min`}
+                  tickLine={false}
+                  axisLine={false}
+                  className="chart-axis"
+                />
+                <YAxis
+                  dataKey="zone"
+                  type="category"
+                  tick={{ fontSize: 11 }}
+                  width={120}
+                  tickLine={false}
+                  axisLine={false}
+                  className="chart-axis"
+                />
+                <Tooltip formatter={(value) => `${value} min`} />
+                <Bar dataKey="minutes" fill="#3b82f6" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">Fordeling per type</h2>
@@ -630,41 +665,6 @@ export default function Dashboard() {
                     <Bar dataKey="km" fill="#3b82f6" />
                   </>
                 )}
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </section>
-
-        <section>
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold">Intensitetsfordeling (pulssoner)</h2>
-            <p className="text-muted text-sm">
-              Garmin leverer tid brukt i sone, men ikke de faktiske pulsgrensene per sone via denne
-              integrasjonen. Derfor vises sonene som generelle nivåer, ikke eksakte bpm-intervaller.
-            </p>
-          </div>
-          <div className="surface-card rounded-xl border p-5 h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={intensity} layout="vertical">
-                <CartesianGrid horizontal={false} className="chart-grid" />
-                <XAxis
-                  type="number"
-                  tickFormatter={(v) => `${v} min`}
-                  tickLine={false}
-                  axisLine={false}
-                  className="chart-axis"
-                />
-                <YAxis
-                  dataKey="zone"
-                  type="category"
-                  tick={{ fontSize: 11 }}
-                  width={120}
-                  tickLine={false}
-                  axisLine={false}
-                  className="chart-axis"
-                />
-                <Tooltip formatter={(value) => `${value} min`} />
-                <Bar dataKey="minutes" fill="#3b82f6" />
               </BarChart>
             </ResponsiveContainer>
           </div>
