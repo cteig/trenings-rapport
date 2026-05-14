@@ -54,7 +54,7 @@ zone                = "fi-hel1"
 plan                = "1xCPU-2GB"
 storage_size        = 25
 ssh_public_key_path = "/Users/christineteig/.ssh/id_ed25519.pub"
-ssh_allowed_cidr    = "104.30.177.164/32"
+ssh_allowed_cidr    = "<your-public-ip>/32"   # find with: curl -s https://checkip.amazonaws.com
 
 enable_daily_backups = true
 backup_time          = "0100"
@@ -292,17 +292,20 @@ systemctl status nginx --no-pager
 
 ### Re-deploy after a code change
 
+`REPO_URL` is only needed on first deploy when the repo is not yet checked out on the server. For subsequent deploys it is not required:
+
+```bash
+SERVER_IP=185.20.137.230 bash scripts/deploy-remote.sh
+```
+
+Or if you want to derive the IP from Terraform:
+
 ```bash
 cd infra/upcloud
-export SERVER_IP="$(terraform output -raw public_ip_address)"
-export SSH_KEY_PATH="$HOME/.ssh/id_ed25519"
-export REPO_URL="https://github.com/cteig/trenings-rapport.git"
-
-../../scripts/deploy-remote.sh
+SERVER_IP="$(terraform output -raw public_ip_address)" ../../scripts/deploy-remote.sh
 ```
 
 ## Recommended next maintenance tasks
 
-- commit the production automation files
 - test the backup timer once on the live server
 - consider adding a restore test procedure for SQLite backups
