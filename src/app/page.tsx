@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { Nav } from "@/components/Nav";
 import {
   BarChart,
   Bar,
@@ -30,8 +31,16 @@ const PERIOD_LABELS: Record<"week" | "month" | "year", string> = {
   year: "År",
 };
 
+const getInitialTheme = (): "light" | "dark" => {
+  if (typeof window === "undefined") {
+    return "light";
+  }
+
+  return window.localStorage.getItem("theme") === "dark" ? "dark" : "light";
+};
+
 export default function Dashboard() {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [theme, setTheme] = useState<"light" | "dark">(getInitialTheme);
   const [activities, setActivities] = useState<StravaActivity[]>([]);
   const [period, setPeriod] = useState<"week" | "month" | "year">("month");
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -99,19 +108,16 @@ export default function Dashboard() {
   }, [fetchActivities]);
 
   useEffect(() => {
-    const storedTheme = window.localStorage.getItem("theme");
-    const initialTheme = storedTheme === "dark" ? "dark" : "light";
-    setTheme(initialTheme);
-    document.documentElement.dataset.theme = initialTheme;
-  }, []);
-
-  useEffect(() => {
     document.documentElement.dataset.theme = theme;
     window.localStorage.setItem("theme", theme);
   }, [theme]);
 
   useEffect(() => {
-    fetchActivities();
+    const timeoutId = window.setTimeout(() => {
+      void fetchActivities();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [fetchActivities]);
 
   if (loading) {
@@ -235,15 +241,13 @@ export default function Dashboard() {
           {firstName ? `Treningsrapport — ${firstName}` : "Treningsrapport"}
         </h1>
         <div className="flex items-center gap-4">
+          <Nav />
           <button
             onClick={() => setTheme((current) => (current === "light" ? "dark" : "light"))}
             className="text-sm text-muted hover:opacity-80"
           >
-            {theme === "light" ? "Dark mode" : "Light mode"}
+            Bytt tema
           </button>
-          <a href="/wellness" className="text-sm text-muted hover:opacity-80">
-            Wellness
-          </a>
           <button onClick={forceRefresh} className="text-sm text-muted hover:opacity-80">
             Oppdater data
           </button>
@@ -475,7 +479,7 @@ export default function Dashboard() {
                 }}
               />
               <Legend />
-              {allActivityTypes.map((type, i) =>
+              {allActivityTypes.map((type) =>
                 visibleActivityTypes.includes(type) ? (
                   <Bar key={type} dataKey={type} stackId="a" fill={getColorForType(type)} />
                 ) : null
@@ -485,7 +489,7 @@ export default function Dashboard() {
         </div>
         {allActivityTypes.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2">
-            {allActivityTypes.map((type, i) => {
+            {allActivityTypes.map((type) => {
               const hidden = hiddenActivityTypes.includes(type);
               return (
                 <button

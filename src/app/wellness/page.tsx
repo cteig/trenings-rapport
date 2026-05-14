@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { Nav } from "@/components/Nav";
 import {
   Bar,
   BarChart,
@@ -21,21 +23,22 @@ import {
 } from "@/lib/wellness";
 import type { WellnessDay } from "@/types/wellness";
 
+const getInitialTheme = (): "light" | "dark" => {
+  if (typeof window === "undefined") {
+    return "light";
+  }
+
+  return window.localStorage.getItem("theme") === "dark" ? "dark" : "light";
+};
+
 export default function WellnessPage() {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [theme, setTheme] = useState<"light" | "dark">(getInitialTheme);
   const [days, setDays] = useState<WellnessDay[]>([]);
   const [rangeDays, setRangeDays] = useState<7 | 30 | 90>(30);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [firstName, setFirstName] = useState<string>("");
-
-  useEffect(() => {
-    const storedTheme = window.localStorage.getItem("theme");
-    const initialTheme = storedTheme === "dark" ? "dark" : "light";
-    setTheme(initialTheme);
-    document.documentElement.dataset.theme = initialTheme;
-  }, []);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -79,8 +82,12 @@ export default function WellnessPage() {
   };
 
   useEffect(() => {
-    fetchWellness(rangeDays);
-  }, []);
+    const timeoutId = window.setTimeout(() => {
+      fetchWellness(rangeDays);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [rangeDays]);
 
   const summary = useMemo(() => getWellnessSummary(days), [days]);
   const sleepChartData = useMemo(() => getSleepChartData(days), [days]);
@@ -98,9 +105,9 @@ export default function WellnessPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4 px-4">
         <p className="text-muted">Du må logge inn for å se wellness-data.</p>
-        <a href="/" className="surface-card rounded-lg border px-4 py-2 text-sm font-medium">
+        <Link href="/" className="surface-card rounded-lg border px-4 py-2 text-sm font-medium">
           Gå til innlogging
-        </a>
+        </Link>
       </div>
     );
   }
@@ -109,9 +116,9 @@ export default function WellnessPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4 px-4">
         <p className="text-red-500">{error}</p>
-        <a href="/" className="surface-card rounded-lg border px-4 py-2 text-sm font-medium">
+        <Link href="/" className="surface-card rounded-lg border px-4 py-2 text-sm font-medium">
           Tilbake til dashboard
-        </a>
+        </Link>
       </div>
     );
   }
@@ -128,11 +135,12 @@ export default function WellnessPage() {
           </p>
         </div>
         <div className="flex items-center gap-4">
+          <Nav />
           <button
             onClick={() => setTheme((current) => (current === "light" ? "dark" : "light"))}
             className="text-sm text-muted hover:opacity-80"
           >
-            {theme === "light" ? "Dark mode" : "Light mode"}
+            Bytt tema
           </button>
           <button
             onClick={() => fetchWellness(rangeDays, true)}
@@ -140,9 +148,6 @@ export default function WellnessPage() {
           >
             Oppdater data
           </button>
-          <a href="/" className="text-sm text-muted hover:opacity-80">
-            Til dashboard
-          </a>
         </div>
       </div>
 

@@ -1,0 +1,17 @@
+hostname            = "trenings-rapport-prod"
+zone                = "nl-ams1"
+plan                = "1xCPU-2GB"
+storage_size        = 25
+ssh_public_key_path = "~/.ssh/id_ed25519.pub"
+
+# Restrict this to your own IP before apply.
+ssh_allowed_cidr = "0.0.0.0/0"
+
+enable_daily_backups = true
+backup_time          = "0100"
+backup_retention     = 8
+
+labels = {
+  app = "trenings-rapport"
+  env = "prod"
+}
