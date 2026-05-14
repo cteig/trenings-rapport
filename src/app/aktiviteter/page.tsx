@@ -1,15 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Nav } from "@/components/Nav";
 import { StravaActivity } from "@/types/strava";
 
 const PAGE_SIZE = 20;
-
-const getInitialTheme = (): "light" | "dark" => {
-  if (typeof window === "undefined") return "light";
-  return window.localStorage.getItem("theme") === "dark" ? "dark" : "light";
-};
 
 function formatDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -156,18 +150,12 @@ function ActivityDetails({ activity }: { activity: StravaActivity }) {
 }
 
 export default function AktiviteterPage() {
-  const [theme, setTheme] = useState<"light" | "dark">(getInitialTheme);
   const [allActivities, setAllActivities] = useState<StravaActivity[]>([]);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    window.localStorage.setItem("theme", theme);
-  }, [theme]);
 
   const fetchActivities = useCallback(async () => {
     setLoading(true);
@@ -195,6 +183,12 @@ export default function AktiviteterPage() {
 
   useEffect(() => {
     fetchActivities();
+  }, [fetchActivities]);
+
+  useEffect(() => {
+    const handler = () => { void fetchActivities(); };
+    window.addEventListener("trenings:refresh", handler);
+    return () => window.removeEventListener("trenings:refresh", handler);
   }, [fetchActivities]);
 
   if (loading) {
@@ -237,15 +231,6 @@ export default function AktiviteterPage() {
     <main className="max-w-7xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Aktiviteter</h1>
-        <div className="flex items-center gap-4">
-          <Nav />
-          <button
-            onClick={() => setTheme((current) => (current === "light" ? "dark" : "light"))}
-            className="text-sm text-muted hover:opacity-80"
-          >
-            Bytt tema
-          </button>
-        </div>
       </div>
 
       <p className="text-muted text-sm mb-4">

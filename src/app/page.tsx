@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Nav } from "@/components/Nav";
 import {
   BarChart,
   Bar,
@@ -31,16 +30,7 @@ const PERIOD_LABELS: Record<"week" | "month" | "year", string> = {
   year: "År",
 };
 
-const getInitialTheme = (): "light" | "dark" => {
-  if (typeof window === "undefined") {
-    return "light";
-  }
-
-  return window.localStorage.getItem("theme") === "dark" ? "dark" : "light";
-};
-
 export default function Dashboard() {
-  const [theme, setTheme] = useState<"light" | "dark">(getInitialTheme);
   const [activities, setActivities] = useState<StravaActivity[]>([]);
   const [period, setPeriod] = useState<"week" | "month" | "year">("month");
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -103,14 +93,11 @@ export default function Dashboard() {
       });
   }, []);
 
-  const forceRefresh = useCallback(() => {
-    fetchActivities(true);
-  }, [fetchActivities]);
-
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    window.localStorage.setItem("theme", theme);
-  }, [theme]);
+    const handler = () => { void fetchActivities(true); };
+    window.addEventListener("trenings:refresh", handler);
+    return () => window.removeEventListener("trenings:refresh", handler);
+  }, [fetchActivities]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -240,21 +227,9 @@ export default function Dashboard() {
         <h1 className="text-2xl font-bold">
           {firstName ? `Treningsrapport — ${firstName}` : "Treningsrapport"}
         </h1>
-        <div className="flex items-center gap-4">
-          <Nav />
-          <button
-            onClick={() => setTheme((current) => (current === "light" ? "dark" : "light"))}
-            className="text-sm text-muted hover:opacity-80"
-          >
-            Bytt tema
-          </button>
-          <button onClick={forceRefresh} className="text-sm text-muted hover:opacity-80">
-            Oppdater data
-          </button>
-          <a href="/api/auth/logout" className="text-sm text-muted hover:opacity-80">
-            Logg ut
-          </a>
-        </div>
+        <a href="/api/auth/logout" className="text-sm text-muted hover:opacity-80">
+          Logg ut
+        </a>
       </div>
       <div className="flex flex-wrap items-center gap-3 mb-8">
         <select

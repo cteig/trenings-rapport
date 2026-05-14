@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Nav } from "@/components/Nav";
 import {
   Bar,
   BarChart,
@@ -23,27 +22,13 @@ import {
 } from "@/lib/wellness";
 import type { WellnessDay } from "@/types/wellness";
 
-const getInitialTheme = (): "light" | "dark" => {
-  if (typeof window === "undefined") {
-    return "light";
-  }
-
-  return window.localStorage.getItem("theme") === "dark" ? "dark" : "light";
-};
-
 export default function WellnessPage() {
-  const [theme, setTheme] = useState<"light" | "dark">(getInitialTheme);
   const [days, setDays] = useState<WellnessDay[]>([]);
   const [rangeDays, setRangeDays] = useState<1 | 7 | 30 | 90>(30);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [firstName, setFirstName] = useState<string>("");
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    window.localStorage.setItem("theme", theme);
-  }, [theme]);
 
   const fetchWellness = (daysToFetch: 1 | 7 | 30 | 90, refresh = false) => {
     setLoading(true);
@@ -87,6 +72,12 @@ export default function WellnessPage() {
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
+  }, [rangeDays]);
+
+  useEffect(() => {
+    const handler = () => fetchWellness(rangeDays, true);
+    window.addEventListener("trenings:refresh", handler);
+    return () => window.removeEventListener("trenings:refresh", handler);
   }, [rangeDays]);
 
   const summary = useMemo(() => getWellnessSummary(days), [days]);
@@ -133,21 +124,6 @@ export default function WellnessPage() {
           <p className="text-muted text-sm mt-1">
             HRV, søvn, stress og hvilepuls for {rangeDays === 1 ? "siste døgn" : `siste ${rangeDays} dager`}
           </p>
-        </div>
-        <div className="flex items-center gap-4">
-          <Nav />
-          <button
-            onClick={() => setTheme((current) => (current === "light" ? "dark" : "light"))}
-            className="text-sm text-muted hover:opacity-80"
-          >
-            Bytt tema
-          </button>
-          <button
-            onClick={() => fetchWellness(rangeDays, true)}
-            className="text-sm text-muted hover:opacity-80"
-          >
-            Oppdater data
-          </button>
         </div>
       </div>
 
