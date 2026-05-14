@@ -34,7 +34,7 @@ const getInitialTheme = (): "light" | "dark" => {
 export default function WellnessPage() {
   const [theme, setTheme] = useState<"light" | "dark">(getInitialTheme);
   const [days, setDays] = useState<WellnessDay[]>([]);
-  const [rangeDays, setRangeDays] = useState<7 | 30 | 90>(30);
+  const [rangeDays, setRangeDays] = useState<1 | 7 | 30 | 90>(30);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
@@ -45,7 +45,7 @@ export default function WellnessPage() {
     window.localStorage.setItem("theme", theme);
   }, [theme]);
 
-  const fetchWellness = (daysToFetch: 7 | 30 | 90, refresh = false) => {
+  const fetchWellness = (daysToFetch: 1 | 7 | 30 | 90, refresh = false) => {
     setLoading(true);
     setError(null);
 
@@ -131,7 +131,7 @@ export default function WellnessPage() {
             {firstName ? `Wellness — ${firstName}` : "Wellness"}
           </h1>
           <p className="text-muted text-sm mt-1">
-            HRV, søvn, stress og hvilepuls for siste {rangeDays} dager
+            HRV, søvn, stress og hvilepuls for {rangeDays === 1 ? "siste døgn" : `siste ${rangeDays} dager`}
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -152,7 +152,7 @@ export default function WellnessPage() {
       </div>
 
       <div className="surface-muted mb-8 inline-flex gap-1 rounded-xl border p-1">
-        {([7, 30, 90] as const).map((option) => (
+        {([1, 7, 30, 90] as const).map((option) => (
           <button
             key={option}
             onClick={() => fetchWellness(option)}
@@ -162,7 +162,7 @@ export default function WellnessPage() {
                 : "text-muted hover:opacity-80"
             }`}
           >
-            {option} dager
+            {option === 1 ? "Siste døgn" : `${option} dager`}
           </button>
         ))}
       </div>
@@ -182,7 +182,7 @@ export default function WellnessPage() {
                 {formatSleepHours(summary.avgSleepSeconds)}
               </p>
               <p className="text-muted text-sm mt-3">
-                Basert på de siste {rangeDays} dagene med søvndata.
+                Basert på {rangeDays === 1 ? "siste døgn" : `de siste ${rangeDays} dagene`} med søvndata.
               </p>
             </div>
             <div className="surface-card rounded-xl border p-5 h-96">
@@ -305,7 +305,7 @@ export default function WellnessPage() {
               {summary.avgSleepScore ?? "–"}
             </p>
             <p className="text-muted text-sm mt-3">
-              Basert på de siste {rangeDays} dagene med score-data.
+              Basert på {rangeDays === 1 ? "siste døgn" : `de siste ${rangeDays} dagene`} med score-data.
             </p>
           </div>
           <div className="surface-card rounded-xl border p-5 h-96">
