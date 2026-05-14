@@ -299,7 +299,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-3 gap-4 mb-8">
         <div className="surface-card rounded-xl border p-5">
           <p className="text-muted text-xs font-semibold uppercase tracking-[0.12em]">
-            Løpeaktiviteter i {selectedYear}
+            Løpe-<br />aktiviteter i {selectedYear}
           </p>
           <p className="text-foreground mt-2 text-3xl font-bold tracking-tight">
             {selectedYearRunActivities.length}
@@ -307,7 +307,7 @@ export default function Dashboard() {
         </div>
         <div className="surface-card rounded-xl border p-5">
           <p className="text-muted text-xs font-semibold uppercase tracking-[0.12em]">
-            Løpetimer i {selectedYear}
+            Løpe-<br />timer i {selectedYear}
           </p>
           <p className="text-foreground mt-2 text-3xl font-bold tracking-tight">
             {Math.round(
@@ -321,7 +321,7 @@ export default function Dashboard() {
         </div>
         <div className="surface-card rounded-xl border p-5">
           <p className="text-muted text-xs font-semibold uppercase tracking-[0.12em]">
-            Løpedistanse i {selectedYear}
+            Løpe-<br />distanse i {selectedYear}
           </p>
           <p className="text-foreground mt-2 text-3xl font-bold tracking-tight">
             {Math.round(
