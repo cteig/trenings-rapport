@@ -213,9 +213,23 @@ export default function WellnessPage() {
               <p className="text-muted text-xs font-semibold uppercase tracking-[0.12em]">
                 HRV-status
               </p>
-              <p className="text-foreground mt-2 text-2xl font-bold tracking-tight">
-                {summary.latestHrvStatus || "Ingen data"}
-              </p>
+              <div className="mt-3">
+                {summary.latestHrvStatus ? (
+                  <span
+                    className={`inline-block rounded-lg px-3 py-1.5 text-sm font-semibold ${
+                      summary.latestHrvStatus === "Balanced"
+                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"
+                        : summary.latestHrvStatus === "Unbalanced"
+                          ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+                          : "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300"
+                    }`}
+                  >
+                    {summary.latestHrvStatus}
+                  </span>
+                ) : (
+                  <span className="text-muted text-sm">Ingen data</span>
+                )}
+              </div>
             </div>
           </div>
           <div className="surface-card rounded-xl border p-5 h-72 sm:h-96">
