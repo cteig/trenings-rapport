@@ -23,6 +23,8 @@ import {
   getTrainingLoadByPeriod,
   getTrainingLoadLastWeek,
   getTrainingLoadLastMonth,
+  getVolumeLastWeek,
+  getVolumeLastMonth,
 } from "@/lib/data";
 
 const PERIOD_LABELS: Record<"week" | "month" | "year", string> = {
@@ -47,6 +49,7 @@ export default function Dashboard() {
   const [typeMetric, setTypeMetric] = useState<"timer" | "distanse">("timer");
   const [hiddenActivityTypes, setHiddenActivityTypes] = useState<string[]>([]);
   const [showLoadDetails, setShowLoadDetails] = useState(false);
+  const [showVolumeDetails, setShowVolumeDetails] = useState(false);
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -176,6 +179,8 @@ export default function Dashboard() {
   const trainingLoad = getTrainingLoadByPeriod(graphActivities, period);
   const lastWeekLoad = getTrainingLoadLastWeek(graphActivities);
   const lastMonthLoad = getTrainingLoadLastMonth(graphActivities);
+  const lastWeekVolume = getVolumeLastWeek(graphActivities);
+  const lastMonthVolume = getVolumeLastMonth(graphActivities);
 
   const allActivityTypes = Array.from(
     new Set(summaries.flatMap((s) => Object.keys(s.byType)))
@@ -371,7 +376,8 @@ export default function Dashboard() {
             Treningsvolum per {PERIOD_LABELS[period].toLowerCase()}
             {yearBadge}
           </h2>
-          <div className="surface-muted flex gap-1 rounded-lg border p-1">
+          <div className="flex items-center gap-2">
+            <div className="surface-muted flex gap-1 rounded-lg border p-1">
             <button
               onClick={() => setVolumeMetric("timer")}
               className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
@@ -392,6 +398,15 @@ export default function Dashboard() {
             >
               Distanse
             </button>
+            </div>
+            {(lastWeekVolume.length > 0 || lastMonthVolume.length > 0) && (
+              <button
+                onClick={() => setShowVolumeDetails((v) => !v)}
+                className="surface-card text-muted hover:opacity-80 h-8 shrink-0 rounded-lg border px-3 text-sm font-medium shadow-sm"
+              >
+                {showVolumeDetails ? "Skjul detaljer" : "Flere detaljer"}
+              </button>
+            )}
           </div>
         </div>
         <div className="surface-card rounded-xl border p-5 h-80">
@@ -474,6 +489,120 @@ export default function Dashboard() {
           </div>
         )}
       </section>
+
+      {showVolumeDetails && lastWeekVolume.length > 0 && (
+        <section className="mb-8">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">
+              Treningsvolum pr dag i uke {lastWeekVolume[0].periodLabel}
+            </h2>
+            <p className="text-muted text-sm">Volum per dag i den siste uken med data.</p>
+          </div>
+          <div className="surface-card rounded-xl border p-5 h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={lastWeekVolume}>
+                <CartesianGrid vertical={false} className="chart-grid" />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                  className="chart-axis"
+                  interval={0}
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  className="chart-axis"
+                  tickFormatter={
+                    volumeMetric === "timer" ? (v) => `${Math.floor(v)}t` : (v) => `${v} km`
+                  }
+                />
+                <Tooltip
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload || !payload.length) return null;
+                    const v = Number(payload[0]?.value);
+                    const formatted =
+                      volumeMetric === "timer"
+                        ? `${Math.floor(v)}t ${Math.round((v - Math.floor(v)) * 60)}m`
+                        : `${v.toFixed(1)} km`;
+                    return (
+                      <div className="surface-tooltip rounded-lg p-2 text-sm">
+                        <p className="text-foreground font-medium">{String(label)}</p>
+                        <p style={{ color: volumeMetric === "timer" ? "#f97316" : "#3b82f6" }}>
+                          Volum: {formatted}
+                        </p>
+                      </div>
+                    );
+                  }}
+                />
+                <Bar
+                  dataKey={volumeMetric === "timer" ? "hours" : "km"}
+                  name="Volum"
+                  fill={volumeMetric === "timer" ? "#f97316" : "#3b82f6"}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+      )}
+
+      {showVolumeDetails && lastMonthVolume.length > 0 && (
+        <section className="mb-8">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">
+              Treningsvolum pr dag i {lastMonthVolume[0].periodLabel}
+            </h2>
+            <p className="text-muted text-sm">Volum per dag i den siste måneden med data.</p>
+          </div>
+          <div className="surface-card rounded-xl border p-5 h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={lastMonthVolume}>
+                <CartesianGrid vertical={false} className="chart-grid" />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                  className="chart-axis"
+                  interval={0}
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  className="chart-axis"
+                  tickFormatter={
+                    volumeMetric === "timer" ? (v) => `${Math.floor(v)}t` : (v) => `${v} km`
+                  }
+                />
+                <Tooltip
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload || !payload.length) return null;
+                    const v = Number(payload[0]?.value);
+                    const formatted =
+                      volumeMetric === "timer"
+                        ? `${Math.floor(v)}t ${Math.round((v - Math.floor(v)) * 60)}m`
+                        : `${v.toFixed(1)} km`;
+                    return (
+                      <div className="surface-tooltip rounded-lg p-2 text-sm">
+                        <p className="text-foreground font-medium">{String(label)}</p>
+                        <p style={{ color: volumeMetric === "timer" ? "#f97316" : "#3b82f6" }}>
+                          Volum: {formatted}
+                        </p>
+                      </div>
+                    );
+                  }}
+                />
+                <Bar
+                  dataKey={volumeMetric === "timer" ? "hours" : "km"}
+                  name="Volum"
+                  fill={volumeMetric === "timer" ? "#f97316" : "#3b82f6"}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+      )}
 
       <section className="mb-8">
         <div className="mb-4">

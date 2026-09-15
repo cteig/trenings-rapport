@@ -435,3 +435,73 @@ export function getTrainingLoadLastMonth(activities: StravaActivity[]): DayLoadP
 
   return loadPerDay(withLoad, monthStart, endOfMonth(monthStart), "d", month);
 }
+
+export interface DayVolumePoint {
+  label: string;
+  hours: number;
+  km: number;
+  periodLabel: string;
+}
+
+// Summerer treningsvolum (timer og km) per dag innenfor [rangeStart, rangeEnd],
+// og fyller inn alle dagene slik at dager uten økt får 0 (tom søyle).
+function volumePerDay(
+  activities: StravaActivity[],
+  rangeStart: Date,
+  rangeEnd: Date,
+  labelFormat: string,
+  periodLabel: string
+): DayVolumePoint[] {
+  const byDay = new Map<string, { minutes: number; km: number }>();
+  for (const a of activities) {
+    const date = new Date(a.start_date_local);
+    if (date < rangeStart || date > rangeEnd) continue;
+    const dayKey = format(date, "yyyy-MM-dd");
+    const entry = byDay.get(dayKey) ?? { minutes: 0, km: 0 };
+    entry.minutes += a.moving_time / 60;
+    entry.km += a.distance / 1000;
+    byDay.set(dayKey, entry);
+  }
+
+  return eachDayOfInterval({ start: rangeStart, end: rangeEnd }).map((date) => {
+    const entry = byDay.get(format(date, "yyyy-MM-dd"));
+    return {
+      label: format(date, labelFormat, { locale: nb }),
+      hours: entry ? +(entry.minutes / 60).toFixed(2) : 0,
+      km: entry ? +entry.km.toFixed(1) : 0,
+      periodLabel,
+    };
+  });
+}
+
+// Treningsvolum per dag for den siste uken som har data.
+export function getVolumeLastWeek(activities: StravaActivity[]): DayVolumePoint[] {
+  if (activities.length === 0) return [];
+
+  const latest = activities.reduce((a, b) =>
+    a.start_date_local > b.start_date_local ? a : b
+  );
+  const weekStart = startOfWeek(new Date(latest.start_date_local), { weekStartsOn: 1 });
+  const week = format(weekStart, "w", { locale: nb });
+
+  return volumePerDay(
+    activities,
+    weekStart,
+    endOfWeek(weekStart, { weekStartsOn: 1 }),
+    "EEE dd.MM",
+    week
+  );
+}
+
+// Treningsvolum per dag for den siste måneden som har data.
+export function getVolumeLastMonth(activities: StravaActivity[]): DayVolumePoint[] {
+  if (activities.length === 0) return [];
+
+  const latest = activities.reduce((a, b) =>
+    a.start_date_local > b.start_date_local ? a : b
+  );
+  const monthStart = startOfMonth(new Date(latest.start_date_local));
+  const month = format(monthStart, "MMMM yyyy", { locale: nb });
+
+  return volumePerDay(activities, monthStart, endOfMonth(monthStart), "d", month);
+}
