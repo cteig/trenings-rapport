@@ -222,31 +222,6 @@ export function getActivityTypeDistribution(
     .sort((a, b) => b.minutes - a.minutes);
 }
 
-export interface TrainingEffectPoint {
-  date: string;
-  name: string;
-  aerobic: number;
-  anaerobic: number;
-}
-
-export function getTrainingEffectOverTime(activities: StravaActivity[]): TrainingEffectPoint[] {
-  return activities
-    .filter((a) => a.aerobic_training_effect != null)
-    .sort((a, b) => a.start_date_local.localeCompare(b.start_date_local))
-    .map((a) => {
-      const aerob = a.aerobic_training_effect || 0;
-      const anaerob = a.anaerobic_training_effect || 0;
-      const total = aerob + anaerob;
-      const aerobicPercent = total > 0 ? Math.round((aerob / total) * 100) : 0;
-      return {
-        date: format(new Date(a.start_date_local), "dd.MM"),
-        name: a.name,
-        aerobic: aerobicPercent,
-        anaerobic: total > 0 ? 100 - aerobicPercent : 0,
-      };
-    });
-}
-
 export interface VO2MaxPoint {
   date: string;
   vo2max: number;

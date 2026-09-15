@@ -19,7 +19,6 @@ import {
   calculateIntensityFromActivities,
   getActivityTypeDistribution,
   getIntensityPercentageByPeriod,
-  getTrainingEffectOverTime,
   getVO2MaxOverTime,
   getTrainingLoadByWeek,
 } from "@/lib/data";
@@ -162,7 +161,6 @@ export default function Dashboard() {
   const periodsWithoutHrData = intensityByPeriod
     .filter((item) => item.zone1 + item.zone2 + item.zone3 + item.zone4 + item.zone5 === 0)
     .map((item) => item.period);
-  const trainingEffect = getTrainingEffectOverTime(graphActivities);
   const vo2max = getVO2MaxOverTime(graphActivities, period);
   const trainingLoad = getTrainingLoadByWeek(graphActivities);
 
@@ -706,51 +704,6 @@ export default function Dashboard() {
           </div>
         </section>
       </div>
-
-      {trainingEffect.length > 0 && (
-        <section className="mb-8">
-          <h2 className="text-lg font-semibold mb-4">Treningseffekt (aerob vs anaerob)</h2>
-          <div className="surface-card rounded-xl border p-5 h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={trainingEffect}>
-                <CartesianGrid vertical={false} className="chart-grid" />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fontSize: 11 }}
-                  tickLine={false}
-                  axisLine={false}
-                  className="chart-axis"
-                  interval={0}
-                />
-                <YAxis
-                  domain={[0, 100]}
-                  tickFormatter={(v) => `${v}%`}
-                  tickLine={false}
-                  axisLine={false}
-                  className="chart-axis"
-                />
-                <Tooltip
-                  content={({ active, payload, label }) => {
-                    if (!active || !payload || !payload.length) return null;
-                    const item = payload[0]?.payload;
-                    return (
-                      <div className="surface-tooltip rounded-lg p-2 text-sm">
-                        <p className="text-foreground font-medium">{item?.name || label}</p>
-                        <p style={{ color: "#10b981" }}>Aerob: {item?.aerobic}%</p>
-                        <p style={{ color: "#f97316" }}>Anaerob: {item?.anaerobic}%</p>
-                      </div>
-                    );
-                  }}
-                />
-                <Legend />
-                <Bar dataKey="aerobic" name="Aerob" stackId="a" fill="#10b981" />
-                <Bar dataKey="anaerobic" name="Anaerob" stackId="a" fill="#f97316" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </section>
-      )}
-
 
       {trainingLoad.length > 0 && (
         <section className="mb-8">
