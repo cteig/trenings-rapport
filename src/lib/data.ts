@@ -5,6 +5,9 @@ import {
   eachWeekOfInterval,
   eachMonthOfInterval,
   eachYearOfInterval,
+  eachDayOfInterval,
+  endOfWeek,
+  endOfMonth,
   format,
 } from "date-fns";
 import { nb } from "date-fns/locale";
@@ -365,31 +368,70 @@ export function getTrainingLoadByPeriod(
   });
 }
 
-export interface SessionLoadPoint {
+export interface DayLoadPoint {
   label: string;
-  name: string;
   load: number;
+  periodLabel: string;
 }
 
-// Treningsbelastning per økt for den siste uken som har data.
-export function getTrainingLoadLastWeek(activities: StravaActivity[]): SessionLoadPoint[] {
+// Summerer treningsbelastning per dag for aktivitetene som ligger innenfor
+// [rangeStart, rangeEnd], og fyller inn alle dagene i intervallet slik at dager
+// uten økt får load 0 (tom søyle).
+function loadPerDay(
+  activities: StravaActivity[],
+  rangeStart: Date,
+  rangeEnd: Date,
+  labelFormat: string,
+  periodLabel: string
+): DayLoadPoint[] {
+  const byDay = new Map<string, number>();
+  for (const a of activities) {
+    if (!a.training_load) continue;
+    const date = new Date(a.start_date_local);
+    if (date < rangeStart || date > rangeEnd) continue;
+    const dayKey = format(date, "yyyy-MM-dd");
+    byDay.set(dayKey, (byDay.get(dayKey) ?? 0) + a.training_load);
+  }
+
+  return eachDayOfInterval({ start: rangeStart, end: rangeEnd }).map((date) => ({
+    label: format(date, labelFormat, { locale: nb }),
+    load: Math.round(byDay.get(format(date, "yyyy-MM-dd")) ?? 0),
+    periodLabel,
+  }));
+}
+
+// Treningsbelastning per dag for den siste uken som har data. Alle sju
+// ukedagene tas med.
+export function getTrainingLoadLastWeek(activities: StravaActivity[]): DayLoadPoint[] {
   const withLoad = activities.filter((a) => a.training_load);
   if (withLoad.length === 0) return [];
 
   const latest = withLoad.reduce((a, b) =>
     a.start_date_local > b.start_date_local ? a : b
   );
-  const weekStart = startOfWeek(new Date(latest.start_date_local), { weekStartsOn: 1 }).getTime();
+  const weekStart = startOfWeek(new Date(latest.start_date_local), { weekStartsOn: 1 });
+  const week = format(weekStart, "w", { locale: nb });
 
-  return withLoad
-    .filter(
-      (a) =>
-        startOfWeek(new Date(a.start_date_local), { weekStartsOn: 1 }).getTime() === weekStart
-    )
-    .sort((a, b) => a.start_date_local.localeCompare(b.start_date_local))
-    .map((a) => ({
-      label: format(new Date(a.start_date_local), "EEE dd.MM", { locale: nb }),
-      name: a.name,
-      load: Math.round(a.training_load!),
-    }));
+  return loadPerDay(
+    withLoad,
+    weekStart,
+    endOfWeek(weekStart, { weekStartsOn: 1 }),
+    "EEE dd.MM",
+    week
+  );
+}
+
+// Treningsbelastning per dag for den siste måneden som har data. Alle dagene i
+// måneden tas med.
+export function getTrainingLoadLastMonth(activities: StravaActivity[]): DayLoadPoint[] {
+  const withLoad = activities.filter((a) => a.training_load);
+  if (withLoad.length === 0) return [];
+
+  const latest = withLoad.reduce((a, b) =>
+    a.start_date_local > b.start_date_local ? a : b
+  );
+  const monthStart = startOfMonth(new Date(latest.start_date_local));
+  const month = format(monthStart, "MMMM yyyy", { locale: nb });
+
+  return loadPerDay(withLoad, monthStart, endOfMonth(monthStart), "d", month);
 }
