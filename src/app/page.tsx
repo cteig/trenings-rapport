@@ -346,39 +346,6 @@ export default function Dashboard() {
 
       {threshold && (
         <div className="grid grid-flow-col auto-cols-fr gap-4 mb-8">
-          {threshold.lactateThresholdHR && (
-            <div className="surface-card rounded-xl border p-5">
-              <p className="text-muted text-xs font-semibold uppercase tracking-[0.12em]">
-                Terskel-puls
-              </p>
-              <p className="text-foreground mt-2 text-3xl font-bold tracking-tight">
-                {threshold.lactateThresholdHR}{" "}
-                <span className="text-muted text-sm font-medium">bpm</span>
-              </p>
-            </div>
-          )}
-          {threshold.lactateThresholdPace && (
-            <div className="surface-card rounded-xl border p-5">
-              <p className="text-muted text-xs font-semibold uppercase tracking-[0.12em]">
-                Terskeltempo
-              </p>
-              <p className="text-foreground mt-2 text-3xl font-bold tracking-tight">
-                {threshold.lactateThresholdPace}{" "}
-                <span className="text-muted text-sm font-medium">/km</span>
-              </p>
-            </div>
-          )}
-          {threshold.vo2MaxRunning && (
-            <div className="surface-card rounded-xl border p-5">
-              <p className="text-muted text-xs font-semibold uppercase tracking-[0.12em]">
-                VO2max løping
-              </p>
-              <p className="text-foreground mt-2 text-3xl font-bold tracking-tight">
-                {threshold.vo2MaxRunning}{" "}
-                <span className="text-muted text-sm font-medium">ml/kg/min</span>
-              </p>
-            </div>
-          )}
           {threshold.vo2MaxCycling && (
             <div className="surface-card rounded-xl border p-5">
               <p className="text-muted text-xs font-semibold uppercase tracking-[0.12em]">
