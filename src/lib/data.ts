@@ -1,4 +1,12 @@
-import { startOfWeek, startOfMonth, startOfYear, format } from "date-fns";
+import {
+  startOfWeek,
+  startOfMonth,
+  startOfYear,
+  eachWeekOfInterval,
+  eachMonthOfInterval,
+  eachYearOfInterval,
+  format,
+} from "date-fns";
 import { nb } from "date-fns/locale";
 import { StravaActivity, PeriodType, ActivitySummary } from "@/types/strava";
 
@@ -323,22 +331,65 @@ export function getTrainingLoadByPeriod(
   activities: StravaActivity[],
   period: PeriodType = "week"
 ): TrainingLoadPoint[] {
-  const map = new Map<string, { sortKey: string; load: number }>();
+  const map = new Map<string, number>();
+  let minDate: Date | null = null;
+  let maxDate: Date | null = null;
 
   for (const act of activities) {
     if (!act.training_load) continue;
     const date = new Date(act.start_date_local);
     const key = getPeriodKey(date, period);
-    const sortKey = getPeriodSortKey(date, period);
-    const existing = map.get(key) || { sortKey, load: 0 };
-    existing.load += act.training_load;
-    map.set(key, existing);
+    map.set(key, (map.get(key) ?? 0) + act.training_load);
+    if (!minDate || date < minDate) minDate = date;
+    if (!maxDate || date > maxDate) maxDate = date;
   }
 
-  return Array.from(map.entries())
-    .sort((a, b) => a[1].sortKey.localeCompare(b[1].sortKey))
-    .map(([key, { load }]) => ({
+  if (!minDate || !maxDate) return [];
+
+  // Fyll inn alle periodene mellom første og siste datapunkt, slik at perioder
+  // uten treningsbelastning vises som tomme søyler i stedet for å hoppes over.
+  const interval = { start: minDate, end: maxDate };
+  const starts =
+    period === "week"
+      ? eachWeekOfInterval(interval, { weekStartsOn: 1 })
+      : period === "month"
+        ? eachMonthOfInterval(interval)
+        : eachYearOfInterval(interval);
+
+  return starts.map((date) => {
+    const key = getPeriodKey(date, period);
+    return {
       period: key,
-      load: Math.round(load),
+      load: Math.round(map.get(key) ?? 0),
+    };
+  });
+}
+
+export interface SessionLoadPoint {
+  label: string;
+  name: string;
+  load: number;
+}
+
+// Treningsbelastning per økt for den siste uken som har data.
+export function getTrainingLoadLastWeek(activities: StravaActivity[]): SessionLoadPoint[] {
+  const withLoad = activities.filter((a) => a.training_load);
+  if (withLoad.length === 0) return [];
+
+  const latest = withLoad.reduce((a, b) =>
+    a.start_date_local > b.start_date_local ? a : b
+  );
+  const weekStart = startOfWeek(new Date(latest.start_date_local), { weekStartsOn: 1 }).getTime();
+
+  return withLoad
+    .filter(
+      (a) =>
+        startOfWeek(new Date(a.start_date_local), { weekStartsOn: 1 }).getTime() === weekStart
+    )
+    .sort((a, b) => a.start_date_local.localeCompare(b.start_date_local))
+    .map((a) => ({
+      label: format(new Date(a.start_date_local), "EEE dd.MM", { locale: nb }),
+      name: a.name,
+      load: Math.round(a.training_load!),
     }));
 }

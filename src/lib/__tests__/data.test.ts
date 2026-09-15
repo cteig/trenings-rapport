@@ -344,6 +344,23 @@ describe("getTrainingLoadByPeriod", () => {
     expect(result[2].load).toBe(50);
   });
 
+  it("fills weeks without data as empty bars", () => {
+    const activities = [
+      makeActivity({ id: 1, start_date_local: "2025-03-03T08:00:00", training_load: 20 }),
+      makeActivity({ id: 2, start_date_local: "2025-03-17T08:00:00", training_load: 50 }),
+    ];
+
+    const result = getTrainingLoadByPeriod(activities, "week");
+
+    expect(result).toHaveLength(3);
+    expect(result[0].period).toContain("Uke 10");
+    expect(result[0].load).toBe(20);
+    expect(result[1].period).toContain("Uke 11");
+    expect(result[1].load).toBe(0);
+    expect(result[2].period).toContain("Uke 12");
+    expect(result[2].load).toBe(50);
+  });
+
   it("groups training load by month", () => {
     const activities = [
       makeActivity({ id: 1, start_date_local: "2025-03-03T08:00:00", training_load: 20 }),

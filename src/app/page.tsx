@@ -21,6 +21,7 @@ import {
   getIntensityPercentageByPeriod,
   getVO2MaxOverTime,
   getTrainingLoadByPeriod,
+  getTrainingLoadLastWeek,
 } from "@/lib/data";
 
 const PERIOD_LABELS: Record<"week" | "month" | "year", string> = {
@@ -171,6 +172,7 @@ export default function Dashboard() {
     .map((item) => item.period);
   const vo2max = getVO2MaxOverTime(graphActivities, period);
   const trainingLoad = getTrainingLoadByPeriod(graphActivities, period);
+  const lastWeekLoad = getTrainingLoadLastWeek(graphActivities);
 
   const allActivityTypes = Array.from(
     new Set(summaries.flatMap((s) => Object.keys(s.byType)))
@@ -549,6 +551,45 @@ export default function Dashboard() {
                 />
                 <YAxis tickLine={false} axisLine={false} className="chart-axis" />
                 <Tooltip formatter={(value) => `${value}`} />
+                <Bar dataKey="load" name="Belastning" fill="#8b5cf6" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+      )}
+
+      {lastWeekLoad.length > 0 && (
+        <section className="mb-8">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Treningsbelastning siste uke</h2>
+            <p className="text-muted text-sm">Belastning per økt i den siste uken med data.</p>
+          </div>
+          <div className="surface-card rounded-xl border p-5 h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={lastWeekLoad}>
+                <CartesianGrid vertical={false} className="chart-grid" />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                  className="chart-axis"
+                  interval={0}
+                />
+                <YAxis tickLine={false} axisLine={false} className="chart-axis" />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (!active || !payload || !payload.length) return null;
+                    const item = payload[0]?.payload;
+                    return (
+                      <div className="surface-tooltip rounded-lg p-2 text-sm">
+                        <p className="text-foreground font-medium">{item?.name}</p>
+                        <p className="text-muted">{item?.label}</p>
+                        <p style={{ color: "#8b5cf6" }}>Belastning: {item?.load}</p>
+                      </div>
+                    );
+                  }}
+                />
                 <Bar dataKey="load" name="Belastning" fill="#8b5cf6" />
               </BarChart>
             </ResponsiveContainer>
