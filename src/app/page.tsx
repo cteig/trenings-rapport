@@ -46,6 +46,7 @@ export default function Dashboard() {
   const [volumeMetric, setVolumeMetric] = useState<"timer" | "distanse">("timer");
   const [typeMetric, setTypeMetric] = useState<"timer" | "distanse">("timer");
   const [hiddenActivityTypes, setHiddenActivityTypes] = useState<string[]>([]);
+  const [showLoadDetails, setShowLoadDetails] = useState(false);
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -529,10 +530,20 @@ export default function Dashboard() {
       {trainingLoad.length > 0 && (
         <section className="mb-8">
           <div className="mb-4">
-            <h2 className="text-lg font-semibold">
-              Treningsbelastning per {PERIOD_LABELS[period].toLowerCase()}
-              {yearBadge}
-            </h2>
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-lg font-semibold">
+                Treningsbelastning per {PERIOD_LABELS[period].toLowerCase()}
+                {yearBadge}
+              </h2>
+              {(lastWeekLoad.length > 0 || lastMonthLoad.length > 0) && (
+                <button
+                  onClick={() => setShowLoadDetails((v) => !v)}
+                  className="surface-card text-muted hover:opacity-80 h-8 shrink-0 rounded-lg border px-3 text-sm font-medium shadow-sm"
+                >
+                  {showLoadDetails ? "Skjul detaljer" : "Flere detaljer"}
+                </button>
+              )}
+            </div>
             <p className="text-muted text-sm">
               Basert på EPOC — kombinerer varighet og intensitet (puls) for å estimere hvor mye
               kroppen må restituere etter hver økt.
@@ -560,7 +571,7 @@ export default function Dashboard() {
         </section>
       )}
 
-      {lastWeekLoad.length > 0 && (
+      {showLoadDetails && lastWeekLoad.length > 0 && (
         <section className="mb-8">
           <div className="mb-4">
             <h2 className="text-lg font-semibold">
@@ -599,7 +610,7 @@ export default function Dashboard() {
         </section>
       )}
 
-      {lastMonthLoad.length > 0 && (
+      {showLoadDetails && lastMonthLoad.length > 0 && (
         <section className="mb-8">
           <div className="mb-4">
             <h2 className="text-lg font-semibold">
