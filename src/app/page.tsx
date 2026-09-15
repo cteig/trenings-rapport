@@ -20,13 +20,21 @@ import {
   getActivityTypeDistribution,
   getIntensityPercentageByPeriod,
   getVO2MaxOverTime,
-  getTrainingLoadByWeek,
+  getTrainingLoadByPeriod,
 } from "@/lib/data";
 
 const PERIOD_LABELS: Record<"week" | "month" | "year", string> = {
   week: "Uke",
   month: "Måned",
   year: "År",
+};
+
+// Korter ned akse-etikettene: "Uke 23, 2025" → "23", "januar 2025" → "jan",
+// år vises som det er. Holder x-aksen lesbar når det er mange perioder.
+const formatPeriodTick = (value: string, period: "week" | "month" | "year") => {
+  if (period === "year") return value;
+  if (period === "month") return value.split(" ")[0].slice(0, 3);
+  return value.split(" ")[1]?.replace(",", "") ?? value;
 };
 
 export default function Dashboard() {
@@ -162,7 +170,7 @@ export default function Dashboard() {
     .filter((item) => item.zone1 + item.zone2 + item.zone3 + item.zone4 + item.zone5 === 0)
     .map((item) => item.period);
   const vo2max = getVO2MaxOverTime(graphActivities, period);
-  const trainingLoad = getTrainingLoadByWeek(graphActivities);
+  const trainingLoad = getTrainingLoadByPeriod(graphActivities, period);
 
   const allActivityTypes = Array.from(
     new Set(summaries.flatMap((s) => Object.keys(s.byType)))
@@ -218,6 +226,12 @@ export default function Dashboard() {
     }
     return row;
   });
+
+  // Valgt årstall vises i overskriftene, unntatt i årsvisning der grafene
+  // spenner over alle år.
+  const yearBadge = period !== "year" && (
+    <span className="text-muted text-sm font-normal ml-2">{selectedYear}</span>
+  );
 
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
@@ -383,9 +397,7 @@ export default function Dashboard() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">
             Treningsvolum per {PERIOD_LABELS[period].toLowerCase()}
-            {period !== "year" && (
-              <span className="text-muted text-sm font-normal ml-2">{selectedYear}</span>
-            )}
+            {yearBadge}
           </h2>
           <div className="surface-muted flex gap-1 rounded-lg border p-1">
             <button
@@ -421,12 +433,7 @@ export default function Dashboard() {
                 axisLine={false}
                 className="chart-axis"
                 interval={0}
-                tickFormatter={(value: string) => {
-                  if (period === "year") return value;
-                  if (period === "month") return value.split(" ")[0].slice(0, 3);
-                  // "Uke 23, 2025" → "23"
-                  return value.split(" ")[1]?.replace(",", "") ?? value;
-                }}
+                tickFormatter={(value: string) => formatPeriodTick(value, period)}
               />
               <YAxis
                 tickLine={false}
@@ -500,6 +507,7 @@ export default function Dashboard() {
         <div className="mb-4">
           <h2 className="text-lg font-semibold">
             Intensitetsfordeling per {PERIOD_LABELS[period].toLowerCase()}
+            {yearBadge}
           </h2>
           <p className="text-muted text-sm">
             Viser hvor stor andel av tiden i hver {PERIOD_LABELS[period].toLowerCase()} som ble
@@ -523,6 +531,7 @@ export default function Dashboard() {
                 axisLine={false}
                 className="chart-axis"
                 interval={0}
+                tickFormatter={(value: string) => formatPeriodTick(value, period)}
               />
               <YAxis
                 domain={[0, 100]}
@@ -546,9 +555,46 @@ export default function Dashboard() {
         </div>
       </section>
 
+      {trainingLoad.length > 0 && (
+        <section className="mb-8">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">
+              Treningsbelastning per {PERIOD_LABELS[period].toLowerCase()}
+              {yearBadge}
+            </h2>
+            <p className="text-muted text-sm">
+              Basert på EPOC — kombinerer varighet og intensitet (puls) for å estimere hvor mye
+              kroppen må restituere etter hver økt.
+            </p>
+          </div>
+          <div className="surface-card rounded-xl border p-5 h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={trainingLoad}>
+                <CartesianGrid vertical={false} className="chart-grid" />
+                <XAxis
+                  dataKey="period"
+                  tick={{ fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                  className="chart-axis"
+                  interval={0}
+                  tickFormatter={(value: string) => formatPeriodTick(value, period)}
+                />
+                <YAxis tickLine={false} axisLine={false} className="chart-axis" />
+                <Tooltip formatter={(value) => `${value}`} />
+                <Bar dataKey="load" name="Belastning" fill="#8b5cf6" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+      )}
+
       {vo2max.length > 1 && (
         <section className="mb-8">
-          <h2 className="text-lg font-semibold mb-4">VO2max-utvikling</h2>
+          <h2 className="text-lg font-semibold mb-4">
+            VO2max-utvikling
+            {yearBadge}
+          </h2>
           <div className="surface-card rounded-xl border p-5 h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={vo2max}>
@@ -585,7 +631,10 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         <section>
           <div className="mb-4">
-            <h2 className="text-lg font-semibold">Intensitetsfordeling (pulssoner)</h2>
+            <h2 className="text-lg font-semibold">
+              Intensitetsfordeling (pulssoner)
+              {yearBadge}
+            </h2>
             <p className="text-muted text-sm">
               Garmin leverer tid brukt i sone, men ikke de faktiske pulsgrensene per sone via denne
               integrasjonen. Derfor vises sonene som generelle nivåer, ikke eksakte bpm-intervaller.
@@ -620,7 +669,10 @@ export default function Dashboard() {
 
         <section>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Fordeling per type</h2>
+            <h2 className="text-lg font-semibold">
+              Fordeling per type
+              {yearBadge}
+            </h2>
             <div className="surface-muted flex gap-1 rounded-lg border p-1">
               <button
                 onClick={() => setTypeMetric("timer")}
@@ -704,35 +756,6 @@ export default function Dashboard() {
           </div>
         </section>
       </div>
-
-      {trainingLoad.length > 0 && (
-        <section className="mb-8">
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold">Treningsbelastning per uke</h2>
-            <p className="text-muted text-sm">
-              Basert på EPOC — kombinerer varighet og intensitet (puls) for å estimere hvor mye
-              kroppen må restituere etter hver økt.
-            </p>
-          </div>
-          <div className="surface-card rounded-xl border p-5 h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={trainingLoad}>
-                <CartesianGrid vertical={false} className="chart-grid" />
-                <XAxis
-                  dataKey="week"
-                  tick={{ fontSize: 12 }}
-                  tickLine={false}
-                  axisLine={false}
-                  className="chart-axis"
-                />
-                <YAxis tickLine={false} axisLine={false} className="chart-axis" />
-                <Tooltip formatter={(value) => `${value}`} />
-                <Bar dataKey="load" name="Belastning" fill="#8b5cf6" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </section>
-      )}
     </main>
   );
 }

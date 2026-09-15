@@ -314,20 +314,22 @@ export function getElevationByMonth(activities: StravaActivity[]): ElevationByMo
   }));
 }
 
-export interface TrainingLoadByWeek {
-  week: string;
+export interface TrainingLoadPoint {
+  period: string;
   load: number;
 }
 
-export function getTrainingLoadByWeek(activities: StravaActivity[]): TrainingLoadByWeek[] {
+export function getTrainingLoadByPeriod(
+  activities: StravaActivity[],
+  period: PeriodType = "week"
+): TrainingLoadPoint[] {
   const map = new Map<string, { sortKey: string; load: number }>();
 
   for (const act of activities) {
     if (!act.training_load) continue;
     const date = new Date(act.start_date_local);
-    const weekStart = startOfWeek(date, { weekStartsOn: 1 });
-    const key = format(weekStart, "'Uke' w", { locale: nb });
-    const sortKey = format(weekStart, "yyyy-MM-dd");
+    const key = getPeriodKey(date, period);
+    const sortKey = getPeriodSortKey(date, period);
     const existing = map.get(key) || { sortKey, load: 0 };
     existing.load += act.training_load;
     map.set(key, existing);
@@ -335,8 +337,8 @@ export function getTrainingLoadByWeek(activities: StravaActivity[]): TrainingLoa
 
   return Array.from(map.entries())
     .sort((a, b) => a[1].sortKey.localeCompare(b[1].sortKey))
-    .map(([week, { load }]) => ({
-      week,
+    .map(([key, { load }]) => ({
+      period: key,
       load: Math.round(load),
     }));
 }

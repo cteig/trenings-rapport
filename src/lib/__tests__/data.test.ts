@@ -5,7 +5,7 @@ import {
   getActivityTypeDistribution,
   getIntensityPercentageByPeriod,
   getVO2MaxOverTime,
-  getTrainingLoadByWeek,
+  getTrainingLoadByPeriod,
 } from "../data";
 import { StravaActivity } from "@/types/strava";
 
@@ -325,7 +325,7 @@ describe("getVO2MaxOverTime", () => {
   });
 });
 
-describe("getTrainingLoadByWeek", () => {
+describe("getTrainingLoadByPeriod", () => {
   it("sorts weekly training load chronologically", () => {
     const activities = [
       makeActivity({ id: 1, start_date_local: "2025-03-17T08:00:00", training_load: 50 }),
@@ -333,14 +333,28 @@ describe("getTrainingLoadByWeek", () => {
       makeActivity({ id: 3, start_date_local: "2025-03-10T08:00:00", training_load: 30 }),
     ];
 
-    const result = getTrainingLoadByWeek(activities);
+    const result = getTrainingLoadByPeriod(activities, "week");
 
     expect(result).toHaveLength(3);
-    expect(result[0].week).toContain("Uke 10");
-    expect(result[1].week).toContain("Uke 11");
-    expect(result[2].week).toContain("Uke 12");
+    expect(result[0].period).toContain("Uke 10");
+    expect(result[1].period).toContain("Uke 11");
+    expect(result[2].period).toContain("Uke 12");
     expect(result[0].load).toBe(20);
     expect(result[1].load).toBe(30);
     expect(result[2].load).toBe(50);
+  });
+
+  it("groups training load by month", () => {
+    const activities = [
+      makeActivity({ id: 1, start_date_local: "2025-03-03T08:00:00", training_load: 20 }),
+      makeActivity({ id: 2, start_date_local: "2025-03-17T08:00:00", training_load: 50 }),
+      makeActivity({ id: 3, start_date_local: "2025-04-02T08:00:00", training_load: 40 }),
+    ];
+
+    const result = getTrainingLoadByPeriod(activities, "month");
+
+    expect(result).toHaveLength(2);
+    expect(result[0].load).toBe(70);
+    expect(result[1].load).toBe(40);
   });
 });
