@@ -564,9 +564,9 @@ export default function Dashboard() {
         <section className="mb-8">
           <div className="mb-4">
             <h2 className="text-lg font-semibold">
-              Treningsbelastning pr økt i uke {lastWeekLoad[0].periodLabel}
+              Treningsbelastning pr dag i uke {lastWeekLoad[0].periodLabel}
             </h2>
-            <p className="text-muted text-sm">Belastning per økt i den siste uken med data.</p>
+            <p className="text-muted text-sm">Belastning per dag i den siste uken med data.</p>
           </div>
           <div className="surface-card rounded-xl border p-5 h-80">
             <ResponsiveContainer width="100%" height="100%">
