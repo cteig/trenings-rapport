@@ -8,6 +8,8 @@ import {
   eachDayOfInterval,
   endOfWeek,
   endOfMonth,
+  subMonths,
+  differenceInCalendarMonths,
   format,
 } from "date-fns";
 import { nb } from "date-fns/locale";
@@ -421,19 +423,36 @@ export function getTrainingLoadLastWeek(activities: StravaActivity[]): DayLoadPo
   );
 }
 
-// Treningsbelastning per dag for den siste måneden som har data. Alle dagene i
-// måneden tas med.
-export function getTrainingLoadLastMonth(activities: StravaActivity[]): DayLoadPoint[] {
+export interface MonthlyLoadView {
+  data: DayLoadPoint[];
+  monthLabel: string;
+  canPrev: boolean;
+  canNext: boolean;
+}
+
+// Treningsbelastning per dag for én måned, med mulighet til å bla. offset 0 =
+// siste måned med data, 1 = måneden før, osv. Grensene følger data-omfanget.
+export function getTrainingLoadMonthView(
+  activities: StravaActivity[],
+  offset: number
+): MonthlyLoadView | null {
   const withLoad = activities.filter((a) => a.training_load);
-  if (withLoad.length === 0) return [];
+  if (withLoad.length === 0) return null;
 
-  const latest = withLoad.reduce((a, b) =>
-    a.start_date_local > b.start_date_local ? a : b
-  );
-  const monthStart = startOfMonth(new Date(latest.start_date_local));
-  const month = format(monthStart, "MMMM yyyy", { locale: nb });
+  const times = withLoad.map((a) => new Date(a.start_date_local).getTime());
+  const latestMonth = startOfMonth(new Date(Math.max(...times)));
+  const earliestMonth = startOfMonth(new Date(Math.min(...times)));
+  const maxOffset = differenceInCalendarMonths(latestMonth, earliestMonth);
+  const clamped = Math.min(Math.max(offset, 0), maxOffset);
+  const monthStart = subMonths(latestMonth, clamped);
+  const monthLabel = format(monthStart, "MMMM yyyy", { locale: nb });
 
-  return loadPerDay(withLoad, monthStart, endOfMonth(monthStart), "d", month);
+  return {
+    data: loadPerDay(withLoad, monthStart, endOfMonth(monthStart), "d", monthLabel),
+    monthLabel,
+    canPrev: clamped < maxOffset, // eldre måned finnes
+    canNext: clamped > 0, // nyere måned finnes
+  };
 }
 
 export interface DayVolumePoint {
@@ -493,15 +512,33 @@ export function getVolumeLastWeek(activities: StravaActivity[]): DayVolumePoint[
   );
 }
 
-// Treningsvolum per dag for den siste måneden som har data.
-export function getVolumeLastMonth(activities: StravaActivity[]): DayVolumePoint[] {
-  if (activities.length === 0) return [];
+export interface MonthlyVolumeView {
+  data: DayVolumePoint[];
+  monthLabel: string;
+  canPrev: boolean;
+  canNext: boolean;
+}
 
-  const latest = activities.reduce((a, b) =>
-    a.start_date_local > b.start_date_local ? a : b
-  );
-  const monthStart = startOfMonth(new Date(latest.start_date_local));
-  const month = format(monthStart, "MMMM yyyy", { locale: nb });
+// Treningsvolum per dag for én måned, med mulighet til å bla. offset 0 = siste
+// måned med data, 1 = måneden før, osv. Grensene følger data-omfanget.
+export function getVolumeMonthView(
+  activities: StravaActivity[],
+  offset: number
+): MonthlyVolumeView | null {
+  if (activities.length === 0) return null;
 
-  return volumePerDay(activities, monthStart, endOfMonth(monthStart), "d", month);
+  const times = activities.map((a) => new Date(a.start_date_local).getTime());
+  const latestMonth = startOfMonth(new Date(Math.max(...times)));
+  const earliestMonth = startOfMonth(new Date(Math.min(...times)));
+  const maxOffset = differenceInCalendarMonths(latestMonth, earliestMonth);
+  const clamped = Math.min(Math.max(offset, 0), maxOffset);
+  const monthStart = subMonths(latestMonth, clamped);
+  const monthLabel = format(monthStart, "MMMM yyyy", { locale: nb });
+
+  return {
+    data: volumePerDay(activities, monthStart, endOfMonth(monthStart), "d", monthLabel),
+    monthLabel,
+    canPrev: clamped < maxOffset, // eldre måned finnes
+    canNext: clamped > 0, // nyere måned finnes
+  };
 }

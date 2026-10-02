@@ -22,9 +22,9 @@ import {
   getVO2MaxOverTime,
   getTrainingLoadByPeriod,
   getTrainingLoadLastWeek,
-  getTrainingLoadLastMonth,
+  getTrainingLoadMonthView,
   getVolumeLastWeek,
-  getVolumeLastMonth,
+  getVolumeMonthView,
 } from "@/lib/data";
 
 const PERIOD_LABELS: Record<"week" | "month" | "year", string> = {
@@ -50,6 +50,8 @@ export default function Dashboard() {
   const [hiddenActivityTypes, setHiddenActivityTypes] = useState<string[]>([]);
   const [showLoadDetails, setShowLoadDetails] = useState(false);
   const [showVolumeDetails, setShowVolumeDetails] = useState(false);
+  const [loadMonthOffset, setLoadMonthOffset] = useState(0);
+  const [volumeMonthOffset, setVolumeMonthOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -178,9 +180,9 @@ export default function Dashboard() {
   const vo2max = getVO2MaxOverTime(graphActivities, period);
   const trainingLoad = getTrainingLoadByPeriod(graphActivities, period);
   const lastWeekLoad = getTrainingLoadLastWeek(graphActivities);
-  const lastMonthLoad = getTrainingLoadLastMonth(graphActivities);
+  const loadMonthView = getTrainingLoadMonthView(activities, loadMonthOffset);
   const lastWeekVolume = getVolumeLastWeek(graphActivities);
-  const lastMonthVolume = getVolumeLastMonth(graphActivities);
+  const volumeMonthView = getVolumeMonthView(activities, volumeMonthOffset);
 
   const allActivityTypes = Array.from(
     new Set(summaries.flatMap((s) => Object.keys(s.byType)))
@@ -399,7 +401,7 @@ export default function Dashboard() {
               Distanse
             </button>
             </div>
-            {(lastWeekVolume.length > 0 || lastMonthVolume.length > 0) && (
+            {(lastWeekVolume.length > 0 || volumeMonthView) && (
               <button
                 onClick={() => setShowVolumeDetails((v) => !v)}
                 className="surface-card text-muted hover:opacity-80 h-8 shrink-0 rounded-lg border px-3 text-sm font-medium shadow-sm"
@@ -547,17 +549,37 @@ export default function Dashboard() {
         </section>
       )}
 
-      {showVolumeDetails && lastMonthVolume.length > 0 && (
+      {showVolumeDetails && volumeMonthView && (
         <section className="mb-8">
           <div className="mb-4">
-            <h2 className="text-lg font-semibold">
-              Treningsvolum pr dag i {lastMonthVolume[0].periodLabel}
-            </h2>
-            <p className="text-muted text-sm">Volum per dag i den siste måneden med data.</p>
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-lg font-semibold">
+                Treningsvolum pr dag i {volumeMonthView.monthLabel}
+              </h2>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={() => setVolumeMonthOffset((o) => o + 1)}
+                  disabled={!volumeMonthView.canPrev}
+                  aria-label="Forrige måned"
+                  className="surface-card flex h-8 w-8 items-center justify-center rounded-lg border text-muted hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  ‹
+                </button>
+                <button
+                  onClick={() => setVolumeMonthOffset((o) => Math.max(0, o - 1))}
+                  disabled={!volumeMonthView.canNext}
+                  aria-label="Neste måned"
+                  className="surface-card flex h-8 w-8 items-center justify-center rounded-lg border text-muted hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  ›
+                </button>
+              </div>
+            </div>
+            <p className="text-muted text-sm">Volum per dag. Bla mellom måneder med pilene.</p>
           </div>
           <div className="surface-card rounded-xl border p-5 h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={lastMonthVolume}>
+              <BarChart data={volumeMonthView.data}>
                 <CartesianGrid vertical={false} className="chart-grid" />
                 <XAxis
                   dataKey="label"
@@ -664,7 +686,7 @@ export default function Dashboard() {
                 Treningsbelastning per {PERIOD_LABELS[period].toLowerCase()}
                 {yearBadge}
               </h2>
-              {(lastWeekLoad.length > 0 || lastMonthLoad.length > 0) && (
+              {(lastWeekLoad.length > 0 || loadMonthView) && (
                 <button
                   onClick={() => setShowLoadDetails((v) => !v)}
                   className="surface-card text-muted hover:opacity-80 h-8 shrink-0 rounded-lg border px-3 text-sm font-medium shadow-sm"
@@ -739,17 +761,37 @@ export default function Dashboard() {
         </section>
       )}
 
-      {showLoadDetails && lastMonthLoad.length > 0 && (
+      {showLoadDetails && loadMonthView && (
         <section className="mb-8">
           <div className="mb-4">
-            <h2 className="text-lg font-semibold">
-              Treningsbelastning pr dag i {lastMonthLoad[0].periodLabel}
-            </h2>
-            <p className="text-muted text-sm">Belastning per dag i den siste måneden med data.</p>
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-lg font-semibold">
+                Treningsbelastning pr dag i {loadMonthView.monthLabel}
+              </h2>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={() => setLoadMonthOffset((o) => o + 1)}
+                  disabled={!loadMonthView.canPrev}
+                  aria-label="Forrige måned"
+                  className="surface-card flex h-8 w-8 items-center justify-center rounded-lg border text-muted hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  ‹
+                </button>
+                <button
+                  onClick={() => setLoadMonthOffset((o) => Math.max(0, o - 1))}
+                  disabled={!loadMonthView.canNext}
+                  aria-label="Neste måned"
+                  className="surface-card flex h-8 w-8 items-center justify-center rounded-lg border text-muted hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  ›
+                </button>
+              </div>
+            </div>
+            <p className="text-muted text-sm">Belastning per dag. Bla mellom måneder med pilene.</p>
           </div>
           <div className="surface-card rounded-xl border p-5 h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={lastMonthLoad}>
+              <BarChart data={loadMonthView.data}>
                 <CartesianGrid vertical={false} className="chart-grid" />
                 <XAxis
                   dataKey="label"
