@@ -373,6 +373,7 @@ export interface DayLoadPoint {
   label: string;
   load: number;
   byType: Record<string, number>;
+  hasCompetition: boolean;
   periodLabel: string;
 }
 
@@ -386,15 +387,19 @@ function loadPerDay(
   labelFormat: string,
   periodLabel: string
 ): DayLoadPoint[] {
-  const byDay = new Map<string, { load: number; byType: Record<string, number> }>();
+  const byDay = new Map<
+    string,
+    { load: number; byType: Record<string, number>; hasCompetition: boolean }
+  >();
   for (const a of activities) {
     if (!a.training_load) continue;
     const date = new Date(a.start_date_local);
     if (date < rangeStart || date > rangeEnd) continue;
     const dayKey = format(date, "yyyy-MM-dd");
-    const entry = byDay.get(dayKey) ?? { load: 0, byType: {} };
+    const entry = byDay.get(dayKey) ?? { load: 0, byType: {}, hasCompetition: false };
     entry.load += a.training_load;
     entry.byType[a.type] = (entry.byType[a.type] ?? 0) + a.training_load;
+    if (a.isCompetition) entry.hasCompetition = true;
     byDay.set(dayKey, entry);
   }
 
@@ -410,6 +415,7 @@ function loadPerDay(
       label: format(date, labelFormat, { locale: nb }),
       load: Math.round(entry?.load ?? 0),
       byType,
+      hasCompetition: entry?.hasCompetition ?? false,
       periodLabel,
     };
   });
@@ -454,6 +460,7 @@ export interface DayVolumePoint {
   hours: number;
   km: number;
   byType: Record<string, { hours: number; km: number }>;
+  hasCompetition: boolean;
   periodLabel: string;
 }
 
@@ -469,17 +476,23 @@ function volumePerDay(
 ): DayVolumePoint[] {
   const byDay = new Map<
     string,
-    { minutes: number; km: number; byType: Record<string, { minutes: number; km: number }> }
+    {
+      minutes: number;
+      km: number;
+      byType: Record<string, { minutes: number; km: number }>;
+      hasCompetition: boolean;
+    }
   >();
   for (const a of activities) {
     const date = new Date(a.start_date_local);
     if (date < rangeStart || date > rangeEnd) continue;
     const dayKey = format(date, "yyyy-MM-dd");
-    const entry = byDay.get(dayKey) ?? { minutes: 0, km: 0, byType: {} };
+    const entry = byDay.get(dayKey) ?? { minutes: 0, km: 0, byType: {}, hasCompetition: false };
     const minutes = a.moving_time / 60;
     const km = a.distance / 1000;
     entry.minutes += minutes;
     entry.km += km;
+    if (a.isCompetition) entry.hasCompetition = true;
     const typeEntry = entry.byType[a.type] ?? { minutes: 0, km: 0 };
     typeEntry.minutes += minutes;
     typeEntry.km += km;
@@ -500,6 +513,7 @@ function volumePerDay(
       hours: entry ? +(entry.minutes / 60).toFixed(2) : 0,
       km: entry ? +entry.km.toFixed(1) : 0,
       byType,
+      hasCompetition: entry?.hasCompetition ?? false,
       periodLabel,
     };
   });

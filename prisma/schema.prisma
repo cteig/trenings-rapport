@@ -75,6 +75,7 @@ model Activity {
   hrTimeInZone4           Float?
   hrTimeInZone5           Float?
   comment                 String?
+  isCompetition           Boolean   @default(false)
   syncedAt                DateTime  @default(now())
   user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 

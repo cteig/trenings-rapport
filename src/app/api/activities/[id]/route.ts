@@ -10,7 +10,7 @@ export async function PATCH(
   if (!email) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
   const { id } = await params;
-  const { comment } = await request.json();
+  const body = await request.json();
 
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -20,10 +20,14 @@ export async function PATCH(
   });
   if (!activity) return NextResponse.json({ error: "Activity not found" }, { status: 404 });
 
+  const data: { comment?: string | null; isCompetition?: boolean } = {};
+  if ("comment" in body) data.comment = body.comment ?? null;
+  if ("isCompetition" in body) data.isCompetition = Boolean(body.isCompetition);
+
   const updated = await prisma.activity.update({
     where: { userId_garminId: { userId: user.id, garminId: id } },
-    data: { comment: comment ?? null },
+    data,
   });
 
-  return NextResponse.json({ comment: updated.comment });
+  return NextResponse.json({ comment: updated.comment, isCompetition: updated.isCompetition });
 }

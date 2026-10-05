@@ -107,6 +107,7 @@ function mapDbToActivity(row: Activity): StravaActivity & { comment?: string } {
     hr_time_in_zone_4: row.hrTimeInZone4 ?? undefined,
     hr_time_in_zone_5: row.hrTimeInZone5 ?? undefined,
     comment: row.comment ?? undefined,
+    isCompetition: row.isCompetition,
   };
 }
 

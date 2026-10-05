@@ -32,6 +32,7 @@ export interface StravaActivity {
   hr_time_in_zone_4?: number; // seconds
   hr_time_in_zone_5?: number; // seconds
   comment?: string;
+  isCompetition?: boolean;
 }
 
 export interface StravaHeartRateZone {

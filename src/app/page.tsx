@@ -81,6 +81,17 @@ const competitionLabel =
     );
   };
 
+// Flagg-symbol øverst på dager der en økt er markert som konkurranse.
+function CompetitionFlagLabel({ viewBox }: { viewBox?: { x?: number; y?: number } }) {
+  const x = viewBox?.x ?? 0;
+  const y = viewBox?.y ?? 0;
+  return (
+    <text x={x} y={y} dy={12} textAnchor="middle" fontSize={14}>
+      🏁
+    </text>
+  );
+}
+
 export default function Dashboard() {
   const [activities, setActivities] = useState<StravaActivity[]>([]);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
@@ -266,6 +277,14 @@ export default function Dashboard() {
 
   const loadMonthMarkers = monthCompetitionMarkers(loadMonthView?.monthKey);
   const volumeMonthMarkers = monthCompetitionMarkers(volumeMonthView?.monthKey);
+
+  // Dager i den viste måneden der en økt er markert som konkurranse (🏁-symbol).
+  const volumeCompetitionDays = (volumeMonthView?.data ?? [])
+    .filter((d) => d.hasCompetition)
+    .map((d) => d.label);
+  const loadCompetitionDays = (loadMonthView?.data ?? [])
+    .filter((d) => d.hasCompetition)
+    .map((d) => d.label);
 
   const allActivityTypes = Array.from(
     new Set(summaries.flatMap((s) => Object.keys(s.byType)))
@@ -737,6 +756,14 @@ export default function Dashboard() {
                     label={competitionLabel(c.name)}
                   />
                 ))}
+                {volumeCompetitionDays.map((label) => (
+                  <ReferenceLine
+                    key={`comp-${label}`}
+                    x={label}
+                    stroke="transparent"
+                    label={CompetitionFlagLabel}
+                  />
+                ))}
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -864,6 +891,14 @@ export default function Dashboard() {
                     stroke="#dc2626"
                     strokeDasharray="4 3"
                     label={competitionLabel(c.name)}
+                  />
+                ))}
+                {loadCompetitionDays.map((label) => (
+                  <ReferenceLine
+                    key={`comp-${label}`}
+                    x={label}
+                    stroke="transparent"
+                    label={CompetitionFlagLabel}
                   />
                 ))}
               </BarChart>

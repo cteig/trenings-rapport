@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { StravaActivity } from "@/types/strava";
 
 const PAGE_SIZE = 20;
@@ -46,10 +47,14 @@ function ActivityDetails({
   activity,
   comment,
   onCommentChange,
+  isCompetition,
+  onCompetitionChange,
 }: {
   activity: StravaActivity;
   comment?: string;
   onCommentChange: (comment: string | null) => void;
+  isCompetition: boolean;
+  onCompetitionChange: (isCompetition: boolean) => void;
 }) {
   const hasZones =
     activity.hr_time_in_zone_1 ||
@@ -155,6 +160,18 @@ function ActivityDetails({
       )}
 
       <div className="col-span-full mt-3 pt-3 border-t">
+        <label className="flex items-center gap-2 text-sm font-medium cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={isCompetition}
+            onChange={(e) => onCompetitionChange(e.target.checked)}
+            className="h-4 w-4"
+          />
+          🏁 Konkurranse
+        </label>
+      </div>
+
+      <div className="col-span-full mt-3 pt-3 border-t">
         <label className="text-muted text-xs font-medium block mb-1">Kommentar</label>
         <textarea
           className="w-full text-sm rounded-lg border surface-card px-3 py-2 resize-none focus:outline-none focus:ring-1"
@@ -179,6 +196,7 @@ export default function AktiviteterPage() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<number, string>>({});
+  const [competitionFlags, setCompetitionFlags] = useState<Record<number, boolean>>({});
 
   const fetchActivities = useCallback(async () => {
     setLoading(true);
@@ -201,8 +219,13 @@ export default function AktiviteterPage() {
     );
     setAllActivities(data);
     const commentMap: Record<number, string> = {};
-    data.forEach((a) => { if (a.comment) commentMap[a.id] = a.comment; });
+    const competitionMap: Record<number, boolean> = {};
+    data.forEach((a) => {
+      if (a.comment) commentMap[a.id] = a.comment;
+      if (a.isCompetition) competitionMap[a.id] = true;
+    });
     setComments(commentMap);
+    setCompetitionFlags(competitionMap);
     setAuthenticated(true);
     setLoading(false);
   }, []);
@@ -221,8 +244,25 @@ export default function AktiviteterPage() {
     });
   };
 
+  const handleCompetitionChange = async (activityId: number, isCompetition: boolean) => {
+    await fetch(`/api/activities/${activityId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isCompetition }),
+    });
+    setCompetitionFlags((prev) => {
+      const next = { ...prev };
+      if (isCompetition) next[activityId] = true;
+      else delete next[activityId];
+      return next;
+    });
+  };
+
   useEffect(() => {
-    fetchActivities();
+    const timeoutId = window.setTimeout(() => {
+      void fetchActivities();
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
   }, [fetchActivities]);
 
   useEffect(() => {
@@ -243,9 +283,9 @@ export default function AktiviteterPage() {
     return (
       <div className="flex flex-col items-center justify-center flex-1 gap-4 py-24">
         <p className="text-muted">Du må logge inn først.</p>
-        <a href="/" className="surface-card rounded-lg border px-4 py-2 text-sm font-medium">
+        <Link href="/" className="surface-card rounded-lg border px-4 py-2 text-sm font-medium">
           Gå til innlogging
-        </a>
+        </Link>
       </div>
     );
   }
@@ -333,6 +373,8 @@ export default function AktiviteterPage() {
                           activity={activity}
                           comment={comments[activity.id]}
                           onCommentChange={(c) => handleCommentChange(activity.id, c)}
+                          isCompetition={!!competitionFlags[activity.id]}
+                          onCompetitionChange={(v) => handleCompetitionChange(activity.id, v)}
                         />
                       </td>
                     </tr>,
