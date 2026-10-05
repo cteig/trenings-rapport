@@ -6,7 +6,6 @@ import {
   eachMonthOfInterval,
   eachYearOfInterval,
   eachDayOfInterval,
-  endOfWeek,
   endOfMonth,
   subMonths,
   differenceInCalendarMonths,
@@ -416,27 +415,6 @@ function loadPerDay(
   });
 }
 
-// Treningsbelastning per dag for den siste uken som har data. Alle sju
-// ukedagene tas med.
-export function getTrainingLoadLastWeek(activities: StravaActivity[]): DayLoadPoint[] {
-  const withLoad = activities.filter((a) => a.training_load);
-  if (withLoad.length === 0) return [];
-
-  const latest = withLoad.reduce((a, b) =>
-    a.start_date_local > b.start_date_local ? a : b
-  );
-  const weekStart = startOfWeek(new Date(latest.start_date_local), { weekStartsOn: 1 });
-  const week = format(weekStart, "w", { locale: nb });
-
-  return loadPerDay(
-    withLoad,
-    weekStart,
-    endOfWeek(weekStart, { weekStartsOn: 1 }),
-    "EEE dd.MM",
-    week
-  );
-}
-
 export interface MonthlyLoadView {
   data: DayLoadPoint[];
   monthLabel: string;
@@ -525,25 +503,6 @@ function volumePerDay(
       periodLabel,
     };
   });
-}
-
-// Treningsvolum per dag for den siste uken som har data.
-export function getVolumeLastWeek(activities: StravaActivity[]): DayVolumePoint[] {
-  if (activities.length === 0) return [];
-
-  const latest = activities.reduce((a, b) =>
-    a.start_date_local > b.start_date_local ? a : b
-  );
-  const weekStart = startOfWeek(new Date(latest.start_date_local), { weekStartsOn: 1 });
-  const week = format(weekStart, "w", { locale: nb });
-
-  return volumePerDay(
-    activities,
-    weekStart,
-    endOfWeek(weekStart, { weekStartsOn: 1 }),
-    "EEE dd.MM",
-    week
-  );
 }
 
 export interface MonthlyVolumeView {

@@ -22,9 +22,7 @@ import {
   getIntensityPercentageByPeriod,
   getVO2MaxOverTime,
   getTrainingLoadByPeriod,
-  getTrainingLoadLastWeek,
   getTrainingLoadMonthView,
-  getVolumeLastWeek,
   getVolumeMonthView,
   getPeriodKey,
   type DayVolumePoint,
@@ -239,9 +237,7 @@ export default function Dashboard() {
     .map((item) => item.period);
   const vo2max = getVO2MaxOverTime(graphActivities, period);
   const trainingLoad = getTrainingLoadByPeriod(graphActivities, period);
-  const lastWeekLoad = getTrainingLoadLastWeek(graphActivities);
   const loadMonthView = getTrainingLoadMonthView(allNormalizedActivities, loadMonthOffset);
-  const lastWeekVolume = getVolumeLastWeek(graphActivities);
   const volumeMonthView = getVolumeMonthView(allNormalizedActivities, volumeMonthOffset);
 
   // Konkurranser innenfor visningen (valgt år, eller alle i årsvisning), med
@@ -331,7 +327,6 @@ export default function Dashboard() {
     return { data, visibleTypes };
   };
 
-  const lastWeekVolumeChart = buildDailyVolumeData(lastWeekVolume);
   const volumeMonthChart = volumeMonthView
     ? buildDailyVolumeData(volumeMonthView.data)
     : null;
@@ -353,7 +348,6 @@ export default function Dashboard() {
     return { data, visibleTypes };
   };
 
-  const lastWeekLoadChart = buildDailyLoadData(lastWeekLoad);
   const loadMonthChart = loadMonthView ? buildDailyLoadData(loadMonthView.data) : null;
 
   const volumeData = summaries.map((s) => {
@@ -559,7 +553,7 @@ export default function Dashboard() {
               Distanse
             </button>
             </div>
-            {(lastWeekVolume.length > 0 || volumeMonthView) && (
+            {volumeMonthView && (
               <button
                 onClick={() => setShowVolumeDetails((v) => !v)}
                 className="surface-card text-muted hover:opacity-80 h-8 shrink-0 rounded-lg border px-3 text-sm font-medium shadow-sm"
@@ -658,67 +652,6 @@ export default function Dashboard() {
           </div>
         )}
       </section>
-
-      {showVolumeDetails && lastWeekVolume.length > 0 && (
-        <section className="mb-8">
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold">
-              Treningsvolum pr dag i uke {lastWeekVolume[0].periodLabel}
-            </h2>
-            <p className="text-muted text-sm">Volum per dag i den siste uken med data.</p>
-          </div>
-          <div className="surface-card rounded-xl border p-5 h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={lastWeekVolumeChart.data}>
-                <CartesianGrid vertical={false} className="chart-grid" />
-                <XAxis
-                  dataKey="label"
-                  tick={{ fontSize: 12 }}
-                  tickLine={false}
-                  axisLine={false}
-                  className="chart-axis"
-                  interval={0}
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  className="chart-axis"
-                  tickFormatter={
-                    volumeMetric === "timer" ? (v) => `${Math.floor(v)}t` : (v) => `${v} km`
-                  }
-                />
-                <Tooltip
-                  content={({ active, payload, label }) => {
-                    if (!active || !payload) return null;
-                    const items = payload.filter((p) => Number(p.value) > 0);
-                    if (items.length === 0) return null;
-                    return (
-                      <div className="surface-tooltip rounded-lg p-2 text-sm">
-                        <p className="text-foreground font-medium mb-1">{String(label)}</p>
-                        {items.map((item) => {
-                          const v = Number(item.value);
-                          const formatted =
-                            volumeMetric === "timer"
-                              ? `${Math.floor(v)}t ${Math.round((v - Math.floor(v)) * 60)}m`
-                              : `${v.toFixed(1)} km`;
-                          return (
-                            <p key={String(item.dataKey)} style={{ color: item.color }}>
-                              {String(item.dataKey)}: {formatted}
-                            </p>
-                          );
-                        })}
-                      </div>
-                    );
-                  }}
-                />
-                {lastWeekVolumeChart.visibleTypes.map((type) => (
-                  <Bar key={type} dataKey={type} stackId="a" fill={getColorForType(type)} />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </section>
-      )}
 
       {showVolumeDetails && volumeMonthView && (
         <section className="mb-8">
@@ -870,7 +803,7 @@ export default function Dashboard() {
                 Treningsbelastning per {PERIOD_LABELS[period].toLowerCase()}
                 {yearBadge}
               </h2>
-              {(lastWeekLoad.length > 0 || loadMonthView) && (
+              {loadMonthView && (
                 <button
                   onClick={() => setShowLoadDetails((v) => !v)}
                   className="surface-card text-muted hover:opacity-80 h-8 shrink-0 rounded-lg border px-3 text-sm font-medium shadow-sm"
@@ -908,53 +841,6 @@ export default function Dashboard() {
                     strokeDasharray="4 3"
                     label={competitionLabel(c.name)}
                   />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </section>
-      )}
-
-      {showLoadDetails && lastWeekLoad.length > 0 && (
-        <section className="mb-8">
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold">
-              Treningsbelastning pr dag i uke {lastWeekLoad[0].periodLabel}
-            </h2>
-            <p className="text-muted text-sm">Belastning per dag i den siste uken med data.</p>
-          </div>
-          <div className="surface-card rounded-xl border p-5 h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={lastWeekLoadChart.data}>
-                <CartesianGrid vertical={false} className="chart-grid" />
-                <XAxis
-                  dataKey="label"
-                  tick={{ fontSize: 12 }}
-                  tickLine={false}
-                  axisLine={false}
-                  className="chart-axis"
-                  interval={0}
-                />
-                <YAxis tickLine={false} axisLine={false} className="chart-axis" />
-                <Tooltip
-                  content={({ active, payload, label }) => {
-                    if (!active || !payload) return null;
-                    const items = payload.filter((p) => Number(p.value) > 0);
-                    if (items.length === 0) return null;
-                    return (
-                      <div className="surface-tooltip rounded-lg p-2 text-sm">
-                        <p className="text-foreground font-medium mb-1">{String(label)}</p>
-                        {items.map((item) => (
-                          <p key={String(item.dataKey)} style={{ color: item.color }}>
-                            {String(item.dataKey)}: {Math.round(Number(item.value))}
-                          </p>
-                        ))}
-                      </div>
-                    );
-                  }}
-                />
-                {lastWeekLoadChart.visibleTypes.map((type) => (
-                  <Bar key={type} dataKey={type} stackId="a" fill={getColorForType(type)} />
                 ))}
               </BarChart>
             </ResponsiveContainer>
