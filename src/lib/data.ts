@@ -373,12 +373,13 @@ export function getTrainingLoadByPeriod(
 export interface DayLoadPoint {
   label: string;
   load: number;
+  byType: Record<string, number>;
   periodLabel: string;
 }
 
 // Summerer treningsbelastning per dag for aktivitetene som ligger innenfor
-// [rangeStart, rangeEnd], og fyller inn alle dagene i intervallet slik at dager
-// uten økt får load 0 (tom søyle).
+// [rangeStart, rangeEnd], fordelt på aktivitetstype, og fyller inn alle dagene i
+// intervallet slik at dager uten økt får load 0 (tom søyle).
 function loadPerDay(
   activities: StravaActivity[],
   rangeStart: Date,
@@ -386,20 +387,33 @@ function loadPerDay(
   labelFormat: string,
   periodLabel: string
 ): DayLoadPoint[] {
-  const byDay = new Map<string, number>();
+  const byDay = new Map<string, { load: number; byType: Record<string, number> }>();
   for (const a of activities) {
     if (!a.training_load) continue;
     const date = new Date(a.start_date_local);
     if (date < rangeStart || date > rangeEnd) continue;
     const dayKey = format(date, "yyyy-MM-dd");
-    byDay.set(dayKey, (byDay.get(dayKey) ?? 0) + a.training_load);
+    const entry = byDay.get(dayKey) ?? { load: 0, byType: {} };
+    entry.load += a.training_load;
+    entry.byType[a.type] = (entry.byType[a.type] ?? 0) + a.training_load;
+    byDay.set(dayKey, entry);
   }
 
-  return eachDayOfInterval({ start: rangeStart, end: rangeEnd }).map((date) => ({
-    label: format(date, labelFormat, { locale: nb }),
-    load: Math.round(byDay.get(format(date, "yyyy-MM-dd")) ?? 0),
-    periodLabel,
-  }));
+  return eachDayOfInterval({ start: rangeStart, end: rangeEnd }).map((date) => {
+    const entry = byDay.get(format(date, "yyyy-MM-dd"));
+    const byType: Record<string, number> = {};
+    if (entry) {
+      for (const [type, load] of Object.entries(entry.byType)) {
+        byType[type] = Math.round(load);
+      }
+    }
+    return {
+      label: format(date, labelFormat, { locale: nb }),
+      load: Math.round(entry?.load ?? 0),
+      byType,
+      periodLabel,
+    };
+  });
 }
 
 // Treningsbelastning per dag for den siste uken som har data. Alle sju
@@ -461,11 +475,13 @@ export interface DayVolumePoint {
   label: string;
   hours: number;
   km: number;
+  byType: Record<string, { hours: number; km: number }>;
   periodLabel: string;
 }
 
 // Summerer treningsvolum (timer og km) per dag innenfor [rangeStart, rangeEnd],
-// og fyller inn alle dagene slik at dager uten økt får 0 (tom søyle).
+// fordelt på aktivitetstype, og fyller inn alle dagene slik at dager uten økt
+// får 0 (tom søyle).
 function volumePerDay(
   activities: StravaActivity[],
   rangeStart: Date,
@@ -473,23 +489,39 @@ function volumePerDay(
   labelFormat: string,
   periodLabel: string
 ): DayVolumePoint[] {
-  const byDay = new Map<string, { minutes: number; km: number }>();
+  const byDay = new Map<
+    string,
+    { minutes: number; km: number; byType: Record<string, { minutes: number; km: number }> }
+  >();
   for (const a of activities) {
     const date = new Date(a.start_date_local);
     if (date < rangeStart || date > rangeEnd) continue;
     const dayKey = format(date, "yyyy-MM-dd");
-    const entry = byDay.get(dayKey) ?? { minutes: 0, km: 0 };
-    entry.minutes += a.moving_time / 60;
-    entry.km += a.distance / 1000;
+    const entry = byDay.get(dayKey) ?? { minutes: 0, km: 0, byType: {} };
+    const minutes = a.moving_time / 60;
+    const km = a.distance / 1000;
+    entry.minutes += minutes;
+    entry.km += km;
+    const typeEntry = entry.byType[a.type] ?? { minutes: 0, km: 0 };
+    typeEntry.minutes += minutes;
+    typeEntry.km += km;
+    entry.byType[a.type] = typeEntry;
     byDay.set(dayKey, entry);
   }
 
   return eachDayOfInterval({ start: rangeStart, end: rangeEnd }).map((date) => {
     const entry = byDay.get(format(date, "yyyy-MM-dd"));
+    const byType: Record<string, { hours: number; km: number }> = {};
+    if (entry) {
+      for (const [type, data] of Object.entries(entry.byType)) {
+        byType[type] = { hours: +(data.minutes / 60).toFixed(2), km: +data.km.toFixed(1) };
+      }
+    }
     return {
       label: format(date, labelFormat, { locale: nb }),
       hours: entry ? +(entry.minutes / 60).toFixed(2) : 0,
       km: entry ? +entry.km.toFixed(1) : 0,
+      byType,
       periodLabel,
     };
   });

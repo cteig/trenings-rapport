@@ -27,6 +27,8 @@ import {
   getVolumeLastWeek,
   getVolumeMonthView,
   getPeriodKey,
+  type DayVolumePoint,
+  type DayLoadPoint,
 } from "@/lib/data";
 
 const PERIOD_LABELS: Record<"week" | "month" | "year", string> = {
@@ -220,6 +222,14 @@ export default function Dashboard() {
     })
   );
 
+  // Alle aktiviteter med normaliserte visningstyper (uavhengig av valgt år), slik
+  // at per-dag-månedsvisningen kan bla over alle måneder og samtidig få samme
+  // typenavn/farger som hovedgrafen.
+  const allNormalizedActivities = activities.map((activity) => ({
+    ...activity,
+    type: normalizeDisplayType(activity.type),
+  }));
+
   const summaries = groupActivitiesByPeriod(graphActivities, period);
   const intensity = calculateIntensityFromActivities(graphActivities);
   const typeDistribution = getActivityTypeDistribution(graphActivities);
@@ -230,9 +240,9 @@ export default function Dashboard() {
   const vo2max = getVO2MaxOverTime(graphActivities, period);
   const trainingLoad = getTrainingLoadByPeriod(graphActivities, period);
   const lastWeekLoad = getTrainingLoadLastWeek(graphActivities);
-  const loadMonthView = getTrainingLoadMonthView(activities, loadMonthOffset);
+  const loadMonthView = getTrainingLoadMonthView(allNormalizedActivities, loadMonthOffset);
   const lastWeekVolume = getVolumeLastWeek(graphActivities);
-  const volumeMonthView = getVolumeMonthView(activities, volumeMonthOffset);
+  const volumeMonthView = getVolumeMonthView(allNormalizedActivities, volumeMonthOffset);
 
   // Konkurranser innenfor visningen (valgt år, eller alle i årsvisning), med
   // periodenøkkel så de kan plasseres som markører i grafene.
@@ -302,6 +312,49 @@ export default function Dashboard() {
   };
 
   const getColorForType = (type: string) => ACTIVITY_COLORS[type] || getGeneratedColorForType(type);
+
+  // Bygger stacked søyledata per dag fordelt på aktivitetstype, slik at per-dag-
+  // grafene får samme farger som hovedgrafen for treningsvolum.
+  const buildDailyVolumeData = (points: DayVolumePoint[]) => {
+    const types = Array.from(
+      new Set(points.flatMap((p) => Object.keys(p.byType ?? {})))
+    ).sort();
+    const visibleTypes = types.filter((type) => !hiddenActivityTypes.includes(type));
+    const data = points.map((p) => {
+      const row: Record<string, string | number> = { label: p.label };
+      for (const type of visibleTypes) {
+        const value = p.byType?.[type];
+        row[type] = value ? (volumeMetric === "timer" ? value.hours : value.km) : 0;
+      }
+      return row;
+    });
+    return { data, visibleTypes };
+  };
+
+  const lastWeekVolumeChart = buildDailyVolumeData(lastWeekVolume);
+  const volumeMonthChart = volumeMonthView
+    ? buildDailyVolumeData(volumeMonthView.data)
+    : null;
+
+  // Tilsvarende for treningsbelastning: stacked søyledata per dag fordelt på
+  // aktivitetstype, med samme farger som ellers.
+  const buildDailyLoadData = (points: DayLoadPoint[]) => {
+    const types = Array.from(
+      new Set(points.flatMap((p) => Object.keys(p.byType ?? {})))
+    ).sort();
+    const visibleTypes = types.filter((type) => !hiddenActivityTypes.includes(type));
+    const data = points.map((p) => {
+      const row: Record<string, string | number> = { label: p.label };
+      for (const type of visibleTypes) {
+        row[type] = p.byType?.[type] ?? 0;
+      }
+      return row;
+    });
+    return { data, visibleTypes };
+  };
+
+  const lastWeekLoadChart = buildDailyLoadData(lastWeekLoad);
+  const loadMonthChart = loadMonthView ? buildDailyLoadData(loadMonthView.data) : null;
 
   const volumeData = summaries.map((s) => {
     const row: Record<string, string | number> = { name: s.period };
@@ -616,7 +669,7 @@ export default function Dashboard() {
           </div>
           <div className="surface-card rounded-xl border p-5 h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={lastWeekVolume}>
+              <BarChart data={lastWeekVolumeChart.data}>
                 <CartesianGrid vertical={false} className="chart-grid" />
                 <XAxis
                   dataKey="label"
@@ -636,27 +689,31 @@ export default function Dashboard() {
                 />
                 <Tooltip
                   content={({ active, payload, label }) => {
-                    if (!active || !payload || !payload.length) return null;
-                    const v = Number(payload[0]?.value);
-                    const formatted =
-                      volumeMetric === "timer"
-                        ? `${Math.floor(v)}t ${Math.round((v - Math.floor(v)) * 60)}m`
-                        : `${v.toFixed(1)} km`;
+                    if (!active || !payload) return null;
+                    const items = payload.filter((p) => Number(p.value) > 0);
+                    if (items.length === 0) return null;
                     return (
                       <div className="surface-tooltip rounded-lg p-2 text-sm">
-                        <p className="text-foreground font-medium">{String(label)}</p>
-                        <p style={{ color: volumeMetric === "timer" ? "#f97316" : "#3b82f6" }}>
-                          Volum: {formatted}
-                        </p>
+                        <p className="text-foreground font-medium mb-1">{String(label)}</p>
+                        {items.map((item) => {
+                          const v = Number(item.value);
+                          const formatted =
+                            volumeMetric === "timer"
+                              ? `${Math.floor(v)}t ${Math.round((v - Math.floor(v)) * 60)}m`
+                              : `${v.toFixed(1)} km`;
+                          return (
+                            <p key={String(item.dataKey)} style={{ color: item.color }}>
+                              {String(item.dataKey)}: {formatted}
+                            </p>
+                          );
+                        })}
                       </div>
                     );
                   }}
                 />
-                <Bar
-                  dataKey={volumeMetric === "timer" ? "hours" : "km"}
-                  name="Volum"
-                  fill={volumeMetric === "timer" ? "#f97316" : "#3b82f6"}
-                />
+                {lastWeekVolumeChart.visibleTypes.map((type) => (
+                  <Bar key={type} dataKey={type} stackId="a" fill={getColorForType(type)} />
+                ))}
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -693,7 +750,7 @@ export default function Dashboard() {
           </div>
           <div className="surface-card rounded-xl border p-5 h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={volumeMonthView.data}>
+              <BarChart data={volumeMonthChart?.data ?? []}>
                 <CartesianGrid vertical={false} className="chart-grid" />
                 <XAxis
                   dataKey="label"
@@ -713,27 +770,31 @@ export default function Dashboard() {
                 />
                 <Tooltip
                   content={({ active, payload, label }) => {
-                    if (!active || !payload || !payload.length) return null;
-                    const v = Number(payload[0]?.value);
-                    const formatted =
-                      volumeMetric === "timer"
-                        ? `${Math.floor(v)}t ${Math.round((v - Math.floor(v)) * 60)}m`
-                        : `${v.toFixed(1)} km`;
+                    if (!active || !payload) return null;
+                    const items = payload.filter((p) => Number(p.value) > 0);
+                    if (items.length === 0) return null;
                     return (
                       <div className="surface-tooltip rounded-lg p-2 text-sm">
-                        <p className="text-foreground font-medium">{String(label)}</p>
-                        <p style={{ color: volumeMetric === "timer" ? "#f97316" : "#3b82f6" }}>
-                          Volum: {formatted}
-                        </p>
+                        <p className="text-foreground font-medium mb-1">{String(label)}</p>
+                        {items.map((item) => {
+                          const v = Number(item.value);
+                          const formatted =
+                            volumeMetric === "timer"
+                              ? `${Math.floor(v)}t ${Math.round((v - Math.floor(v)) * 60)}m`
+                              : `${v.toFixed(1)} km`;
+                          return (
+                            <p key={String(item.dataKey)} style={{ color: item.color }}>
+                              {String(item.dataKey)}: {formatted}
+                            </p>
+                          );
+                        })}
                       </div>
                     );
                   }}
                 />
-                <Bar
-                  dataKey={volumeMetric === "timer" ? "hours" : "km"}
-                  name="Volum"
-                  fill={volumeMetric === "timer" ? "#f97316" : "#3b82f6"}
-                />
+                {(volumeMonthChart?.visibleTypes ?? []).map((type) => (
+                  <Bar key={type} dataKey={type} stackId="a" fill={getColorForType(type)} />
+                ))}
                 {volumeMonthMarkers.map((c) => (
                   <ReferenceLine
                     key={c.id}
@@ -864,7 +925,7 @@ export default function Dashboard() {
           </div>
           <div className="surface-card rounded-xl border p-5 h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={lastWeekLoad}>
+              <BarChart data={lastWeekLoadChart.data}>
                 <CartesianGrid vertical={false} className="chart-grid" />
                 <XAxis
                   dataKey="label"
@@ -877,16 +938,24 @@ export default function Dashboard() {
                 <YAxis tickLine={false} axisLine={false} className="chart-axis" />
                 <Tooltip
                   content={({ active, payload, label }) => {
-                    if (!active || !payload || !payload.length) return null;
+                    if (!active || !payload) return null;
+                    const items = payload.filter((p) => Number(p.value) > 0);
+                    if (items.length === 0) return null;
                     return (
                       <div className="surface-tooltip rounded-lg p-2 text-sm">
-                        <p className="text-foreground font-medium">{String(label)}</p>
-                        <p style={{ color: "#8b5cf6" }}>Belastning: {payload[0]?.value}</p>
+                        <p className="text-foreground font-medium mb-1">{String(label)}</p>
+                        {items.map((item) => (
+                          <p key={String(item.dataKey)} style={{ color: item.color }}>
+                            {String(item.dataKey)}: {Math.round(Number(item.value))}
+                          </p>
+                        ))}
                       </div>
                     );
                   }}
                 />
-                <Bar dataKey="load" name="Belastning" fill="#8b5cf6" />
+                {lastWeekLoadChart.visibleTypes.map((type) => (
+                  <Bar key={type} dataKey={type} stackId="a" fill={getColorForType(type)} />
+                ))}
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -923,7 +992,7 @@ export default function Dashboard() {
           </div>
           <div className="surface-card rounded-xl border p-5 h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={loadMonthView.data}>
+              <BarChart data={loadMonthChart?.data ?? []}>
                 <CartesianGrid vertical={false} className="chart-grid" />
                 <XAxis
                   dataKey="label"
@@ -936,16 +1005,24 @@ export default function Dashboard() {
                 <YAxis tickLine={false} axisLine={false} className="chart-axis" />
                 <Tooltip
                   content={({ active, payload, label }) => {
-                    if (!active || !payload || !payload.length) return null;
+                    if (!active || !payload) return null;
+                    const items = payload.filter((p) => Number(p.value) > 0);
+                    if (items.length === 0) return null;
                     return (
                       <div className="surface-tooltip rounded-lg p-2 text-sm">
-                        <p className="text-foreground font-medium">{String(label)}</p>
-                        <p style={{ color: "#8b5cf6" }}>Belastning: {payload[0]?.value}</p>
+                        <p className="text-foreground font-medium mb-1">{String(label)}</p>
+                        {items.map((item) => (
+                          <p key={String(item.dataKey)} style={{ color: item.color }}>
+                            {String(item.dataKey)}: {Math.round(Number(item.value))}
+                          </p>
+                        ))}
                       </div>
                     );
                   }}
                 />
-                <Bar dataKey="load" name="Belastning" fill="#8b5cf6" />
+                {(loadMonthChart?.visibleTypes ?? []).map((type) => (
+                  <Bar key={type} dataKey={type} stackId="a" fill={getColorForType(type)} />
+                ))}
                 {loadMonthMarkers.map((c) => (
                   <ReferenceLine
                     key={c.id}
