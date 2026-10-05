@@ -100,8 +100,7 @@ export default function Dashboard() {
   const [volumeMetric, setVolumeMetric] = useState<"timer" | "distanse">("timer");
   const [typeMetric, setTypeMetric] = useState<"timer" | "distanse">("timer");
   const [hiddenActivityTypes, setHiddenActivityTypes] = useState<string[]>([]);
-  const [showLoadDetails, setShowLoadDetails] = useState(false);
-  const [showVolumeDetails, setShowVolumeDetails] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const [loadMonthOffset, setLoadMonthOffset] = useState(0);
   const [volumeMonthOffset, setVolumeMonthOffset] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -574,10 +573,10 @@ export default function Dashboard() {
             </div>
             {period !== "year" && volumeMonthView && (
               <button
-                onClick={() => setShowVolumeDetails((v) => !v)}
+                onClick={() => setShowDetails((v) => !v)}
                 className="surface-card text-muted hover:opacity-80 h-8 shrink-0 rounded-lg border px-3 text-sm font-medium shadow-sm"
               >
-                {showVolumeDetails ? "Skjul detaljer" : "Flere detaljer"}
+                {showDetails ? "Skjul detaljer" : "Flere detaljer"}
               </button>
             )}
           </div>
@@ -672,7 +671,7 @@ export default function Dashboard() {
         )}
       </section>
 
-      {period !== "year" && showVolumeDetails && volumeMonthView && (
+      {period !== "year" && showDetails && volumeMonthView && (
         <section className="mb-8">
           <div className="mb-4">
             <div className="flex items-center justify-between gap-4">
@@ -773,20 +772,10 @@ export default function Dashboard() {
       {trainingLoad.length > 0 && (
         <section className="mb-8">
           <div className="mb-4">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="text-lg font-semibold">
-                Treningsbelastning per {PERIOD_LABELS[period].toLowerCase()}
-                {yearBadge}
-              </h2>
-              {period !== "year" && loadMonthView && (
-                <button
-                  onClick={() => setShowLoadDetails((v) => !v)}
-                  className="surface-card text-muted hover:opacity-80 h-8 shrink-0 rounded-lg border px-3 text-sm font-medium shadow-sm"
-                >
-                  {showLoadDetails ? "Skjul detaljer" : "Flere detaljer"}
-                </button>
-              )}
-            </div>
+            <h2 className="text-lg font-semibold">
+              Treningsbelastning per {PERIOD_LABELS[period].toLowerCase()}
+              {yearBadge}
+            </h2>
             <p className="text-muted text-sm">
               Basert på EPOC — kombinerer varighet og intensitet (puls) for å estimere hvor mye
               kroppen må restituere etter hver økt.
@@ -823,7 +812,7 @@ export default function Dashboard() {
         </section>
       )}
 
-      {period !== "year" && showLoadDetails && loadMonthView && (
+      {period !== "year" && showDetails && loadMonthView && (
         <section className="mb-8">
           <div className="mb-4">
             <div className="flex items-center justify-between gap-4">
