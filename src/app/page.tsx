@@ -22,8 +22,7 @@ import {
   getIntensityPercentageByPeriod,
   getVO2MaxOverTime,
   getTrainingLoadByPeriod,
-  getTrainingLoadMonthView,
-  getVolumeMonthView,
+  getMonthDetailView,
   getPeriodKey,
   type DayVolumePoint,
   type DayLoadPoint,
@@ -101,8 +100,7 @@ export default function Dashboard() {
   const [typeMetric, setTypeMetric] = useState<"timer" | "distanse">("timer");
   const [hiddenActivityTypes, setHiddenActivityTypes] = useState<string[]>([]);
   const [showDetails, setShowDetails] = useState(false);
-  const [loadMonthOffset, setLoadMonthOffset] = useState(0);
-  const [volumeMonthOffset, setVolumeMonthOffset] = useState(0);
+  const [monthOffset, setMonthOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -247,8 +245,7 @@ export default function Dashboard() {
     .map((item) => item.period);
   const vo2max = getVO2MaxOverTime(graphActivities, period);
   const trainingLoad = getTrainingLoadByPeriod(graphActivities, period);
-  const loadMonthView = getTrainingLoadMonthView(allNormalizedActivities, loadMonthOffset);
-  const volumeMonthView = getVolumeMonthView(allNormalizedActivities, volumeMonthOffset);
+  const monthDetail = getMonthDetailView(allNormalizedActivities, monthOffset);
 
   // Konkurranser innenfor visningen (valgt år, eller alle i årsvisning), med
   // periodenøkkel så de kan plasseres som markører i grafene.
@@ -274,14 +271,13 @@ export default function Dashboard() {
           .map((c) => ({ ...c, dayLabel: String(Number(c.date.slice(8, 10))) }))
       : [];
 
-  const loadMonthMarkers = monthCompetitionMarkers(loadMonthView?.monthKey);
-  const volumeMonthMarkers = monthCompetitionMarkers(volumeMonthView?.monthKey);
+  const monthMarkers = monthCompetitionMarkers(monthDetail?.monthKey);
 
   // Dager i den viste måneden der en økt er markert som konkurranse (🏁-symbol).
-  const volumeCompetitionDays = (volumeMonthView?.data ?? [])
+  const volumeCompetitionDays = (monthDetail?.volume ?? [])
     .filter((d) => d.hasCompetition)
     .map((d) => d.label);
-  const loadCompetitionDays = (loadMonthView?.data ?? [])
+  const loadCompetitionDays = (monthDetail?.load ?? [])
     .filter((d) => d.hasCompetition)
     .map((d) => d.label);
 
@@ -345,9 +341,7 @@ export default function Dashboard() {
     return { data, visibleTypes };
   };
 
-  const volumeMonthChart = volumeMonthView
-    ? buildDailyVolumeData(volumeMonthView.data)
-    : null;
+  const volumeMonthChart = monthDetail ? buildDailyVolumeData(monthDetail.volume) : null;
 
   // Tilsvarende for treningsbelastning: stacked søyledata per dag fordelt på
   // aktivitetstype, med samme farger som ellers.
@@ -366,7 +360,7 @@ export default function Dashboard() {
     return { data, visibleTypes };
   };
 
-  const loadMonthChart = loadMonthView ? buildDailyLoadData(loadMonthView.data) : null;
+  const loadMonthChart = monthDetail ? buildDailyLoadData(monthDetail.load) : null;
 
   const volumeData = summaries.map((s) => {
     const row: Record<string, string | number> = { name: s.period };
@@ -571,7 +565,7 @@ export default function Dashboard() {
               Distanse
             </button>
             </div>
-            {period !== "year" && volumeMonthView && (
+            {period !== "year" && monthDetail && (
               <button
                 onClick={() => setShowDetails((v) => !v)}
                 className="surface-card text-muted hover:opacity-80 h-8 shrink-0 rounded-lg border px-3 text-sm font-medium shadow-sm"
@@ -671,33 +665,33 @@ export default function Dashboard() {
         )}
       </section>
 
-      {period !== "year" && showDetails && volumeMonthView && (
+      {period !== "year" && showDetails && monthDetail && (
         <section className="mb-8">
           <div className="mb-4">
             <div className="flex items-center justify-between gap-4">
               <h2 className="text-lg font-semibold">
-                Treningsvolum pr dag i {volumeMonthView.monthLabel}
+                Treningsvolum pr dag i {monthDetail?.monthLabel}
               </h2>
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  onClick={() => setVolumeMonthOffset((o) => o + 1)}
-                  disabled={!volumeMonthView.canPrev}
-                  aria-label="Forrige måned"
-                  className="surface-card flex h-8 w-8 items-center justify-center rounded-lg border text-muted hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-30"
-                >
-                  ‹
-                </button>
-                <button
-                  onClick={() => setVolumeMonthOffset((o) => Math.max(0, o - 1))}
-                  disabled={!volumeMonthView.canNext}
-                  aria-label="Neste måned"
-                  className="surface-card flex h-8 w-8 items-center justify-center rounded-lg border text-muted hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-30"
-                >
-                  ›
-                </button>
+              <div className="flex items-center gap-2 shrink-0">
+                {monthDetail?.prevMonthLabel && (
+                  <button
+                    onClick={() => setMonthOffset((o) => o + 1)}
+                    className="surface-card text-muted hover:opacity-80 h-8 rounded-lg border px-3 text-sm font-medium capitalize"
+                  >
+                    {monthDetail.prevMonthLabel}
+                  </button>
+                )}
+                {monthDetail?.nextMonthLabel && (
+                  <button
+                    onClick={() => setMonthOffset((o) => Math.max(0, o - 1))}
+                    className="surface-card text-muted hover:opacity-80 h-8 rounded-lg border px-3 text-sm font-medium capitalize"
+                  >
+                    {monthDetail.nextMonthLabel}
+                  </button>
+                )}
               </div>
             </div>
-            <p className="text-muted text-sm">Volum per dag. Bla mellom måneder med pilene.</p>
+            <p className="text-muted text-sm">Volum per dag. Bla mellom måneder med knappene.</p>
           </div>
           <div className="surface-card rounded-xl border p-5 h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -746,7 +740,7 @@ export default function Dashboard() {
                 {(volumeMonthChart?.visibleTypes ?? []).map((type) => (
                   <Bar key={type} dataKey={type} stackId="a" fill={getColorForType(type)} />
                 ))}
-                {volumeMonthMarkers.map((c) => (
+                {monthMarkers.map((c) => (
                   <ReferenceLine
                     key={c.id}
                     x={c.dayLabel}
@@ -812,33 +806,15 @@ export default function Dashboard() {
         </section>
       )}
 
-      {period !== "year" && showDetails && loadMonthView && (
+      {period !== "year" && showDetails && monthDetail && (
         <section className="mb-8">
           <div className="mb-4">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="text-lg font-semibold">
-                Treningsbelastning pr dag i {loadMonthView.monthLabel}
-              </h2>
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  onClick={() => setLoadMonthOffset((o) => o + 1)}
-                  disabled={!loadMonthView.canPrev}
-                  aria-label="Forrige måned"
-                  className="surface-card flex h-8 w-8 items-center justify-center rounded-lg border text-muted hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-30"
-                >
-                  ‹
-                </button>
-                <button
-                  onClick={() => setLoadMonthOffset((o) => Math.max(0, o - 1))}
-                  disabled={!loadMonthView.canNext}
-                  aria-label="Neste måned"
-                  className="surface-card flex h-8 w-8 items-center justify-center rounded-lg border text-muted hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-30"
-                >
-                  ›
-                </button>
-              </div>
-            </div>
-            <p className="text-muted text-sm">Belastning per dag. Bla mellom måneder med pilene.</p>
+            <h2 className="text-lg font-semibold">
+              Treningsbelastning pr dag i {monthDetail.monthLabel}
+            </h2>
+            <p className="text-muted text-sm">
+              Belastning per dag. Bla mellom måneder med knappene over.
+            </p>
           </div>
           <div className="surface-card rounded-xl border p-5 h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -873,7 +849,7 @@ export default function Dashboard() {
                 {(loadMonthChart?.visibleTypes ?? []).map((type) => (
                   <Bar key={type} dataKey={type} stackId="a" fill={getColorForType(type)} />
                 ))}
-                {loadMonthMarkers.map((c) => (
+                {monthMarkers.map((c) => (
                   <ReferenceLine
                     key={c.id}
                     x={c.dayLabel}

@@ -8,6 +8,7 @@ import {
   eachDayOfInterval,
   endOfMonth,
   subMonths,
+  addMonths,
   differenceInCalendarMonths,
   format,
 } from "date-fns";
@@ -421,40 +422,6 @@ function loadPerDay(
   });
 }
 
-export interface MonthlyLoadView {
-  data: DayLoadPoint[];
-  monthLabel: string;
-  monthKey: string;
-  canPrev: boolean;
-  canNext: boolean;
-}
-
-// Treningsbelastning per dag for én måned, med mulighet til å bla. offset 0 =
-// siste måned med data, 1 = måneden før, osv. Grensene følger data-omfanget.
-export function getTrainingLoadMonthView(
-  activities: StravaActivity[],
-  offset: number
-): MonthlyLoadView | null {
-  const withLoad = activities.filter((a) => a.training_load);
-  if (withLoad.length === 0) return null;
-
-  const times = withLoad.map((a) => new Date(a.start_date_local).getTime());
-  const latestMonth = startOfMonth(new Date(Math.max(...times)));
-  const earliestMonth = startOfMonth(new Date(Math.min(...times)));
-  const maxOffset = differenceInCalendarMonths(latestMonth, earliestMonth);
-  const clamped = Math.min(Math.max(offset, 0), maxOffset);
-  const monthStart = subMonths(latestMonth, clamped);
-  const monthLabel = format(monthStart, "MMMM yyyy", { locale: nb });
-
-  return {
-    data: loadPerDay(withLoad, monthStart, endOfMonth(monthStart), "d", monthLabel),
-    monthLabel,
-    monthKey: format(monthStart, "yyyy-MM"),
-    canPrev: clamped < maxOffset, // eldre måned finnes
-    canNext: clamped > 0, // nyere måned finnes
-  };
-}
-
 export interface DayVolumePoint {
   label: string;
   hours: number;
@@ -519,20 +486,24 @@ function volumePerDay(
   });
 }
 
-export interface MonthlyVolumeView {
-  data: DayVolumePoint[];
+export interface MonthDetailView {
   monthLabel: string;
   monthKey: string;
-  canPrev: boolean;
-  canNext: boolean;
+  // Navn på forrige/neste måned (for bla-knappene), null når det ikke finnes
+  // eldre/nyere data.
+  prevMonthLabel: string | null;
+  nextMonthLabel: string | null;
+  volume: DayVolumePoint[];
+  load: DayLoadPoint[];
 }
 
-// Treningsvolum per dag for én måned, med mulighet til å bla. offset 0 = siste
-// måned med data, 1 = måneden før, osv. Grensene følger data-omfanget.
-export function getVolumeMonthView(
+// Felles per-dag-detaljer (volum og belastning) for én måned, slik at begge
+// grafene alltid viser samme måned og styres av én bla-kontroll. Måneds-omfanget
+// følger alle aktiviteter. offset 0 = siste måned med data, 1 = måneden før, osv.
+export function getMonthDetailView(
   activities: StravaActivity[],
   offset: number
-): MonthlyVolumeView | null {
+): MonthDetailView | null {
   if (activities.length === 0) return null;
 
   const times = activities.map((a) => new Date(a.start_date_local).getTime());
@@ -541,13 +512,17 @@ export function getVolumeMonthView(
   const maxOffset = differenceInCalendarMonths(latestMonth, earliestMonth);
   const clamped = Math.min(Math.max(offset, 0), maxOffset);
   const monthStart = subMonths(latestMonth, clamped);
+  const monthEnd = endOfMonth(monthStart);
   const monthLabel = format(monthStart, "MMMM yyyy", { locale: nb });
+  const withLoad = activities.filter((a) => a.training_load);
 
   return {
-    data: volumePerDay(activities, monthStart, endOfMonth(monthStart), "d", monthLabel),
     monthLabel,
     monthKey: format(monthStart, "yyyy-MM"),
-    canPrev: clamped < maxOffset, // eldre måned finnes
-    canNext: clamped > 0, // nyere måned finnes
+    prevMonthLabel:
+      clamped < maxOffset ? format(subMonths(monthStart, 1), "MMMM", { locale: nb }) : null,
+    nextMonthLabel: clamped > 0 ? format(addMonths(monthStart, 1), "MMMM", { locale: nb }) : null,
+    volume: volumePerDay(activities, monthStart, monthEnd, "d", monthLabel),
+    load: loadPerDay(withLoad, monthStart, monthEnd, "d", monthLabel),
   };
 }
