@@ -427,7 +427,7 @@ export default function Dashboard() {
 
       {upcomingCompetitions.length > 0 && (
         <section className="mb-8">
-          <h2 className="text-lg font-semibold mb-3">Kommende hovedløp</h2>
+          <h2 className="text-lg font-semibold mb-3">Kommende viktige konkurranser</h2>
           <div className="flex flex-wrap gap-4">
             {upcomingCompetitions.map((c) => (
               <div

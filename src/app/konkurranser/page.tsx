@@ -124,10 +124,10 @@ export default function KonkurranserPage() {
 
   return (
     <main className="max-w-3xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">Hovedløp</h1>
+      <h1 className="text-2xl font-bold mb-6">Viktige konkurranser</h1>
 
       <form onSubmit={handleAdd} className="surface-card rounded-xl border p-5 mb-8 flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">Legg til hovedløp</h2>
+        <h2 className="text-lg font-semibold">Legg til viktig konkurranse</h2>
         <div className="flex flex-col gap-1">
           <label className="text-muted text-xs font-medium">Navn</label>
           <input
@@ -185,7 +185,7 @@ export default function KonkurranserPage() {
       <section className="mb-8">
         <h2 className="text-lg font-semibold mb-3">Kommende</h2>
         {upcoming.length === 0 ? (
-          <p className="text-muted text-sm">Ingen kommende hovedløp lagt inn ennå.</p>
+          <p className="text-muted text-sm">Ingen kommende viktige konkurranser lagt inn ennå.</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {upcoming.map((c) => (
