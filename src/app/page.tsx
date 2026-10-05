@@ -553,7 +553,7 @@ export default function Dashboard() {
               Distanse
             </button>
             </div>
-            {volumeMonthView && (
+            {period !== "year" && volumeMonthView && (
               <button
                 onClick={() => setShowVolumeDetails((v) => !v)}
                 className="surface-card text-muted hover:opacity-80 h-8 shrink-0 rounded-lg border px-3 text-sm font-medium shadow-sm"
@@ -653,7 +653,7 @@ export default function Dashboard() {
         )}
       </section>
 
-      {showVolumeDetails && volumeMonthView && (
+      {period !== "year" && showVolumeDetails && volumeMonthView && (
         <section className="mb-8">
           <div className="mb-4">
             <div className="flex items-center justify-between gap-4">
@@ -751,7 +751,7 @@ export default function Dashboard() {
                 Treningsbelastning per {PERIOD_LABELS[period].toLowerCase()}
                 {yearBadge}
               </h2>
-              {loadMonthView && (
+              {period !== "year" && loadMonthView && (
                 <button
                   onClick={() => setShowLoadDetails((v) => !v)}
                   className="surface-card text-muted hover:opacity-80 h-8 shrink-0 rounded-lg border px-3 text-sm font-medium shadow-sm"
@@ -796,7 +796,7 @@ export default function Dashboard() {
         </section>
       )}
 
-      {showLoadDetails && loadMonthView && (
+      {period !== "year" && showLoadDetails && loadMonthView && (
         <section className="mb-8">
           <div className="mb-4">
             <div className="flex items-center justify-between gap-4">
