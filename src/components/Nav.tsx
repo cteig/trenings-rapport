@@ -7,6 +7,7 @@ const links = [
   { href: "/", label: "Dashboard" },
   { href: "/aktiviteter", label: "Aktiviteter" },
   { href: "/wellness", label: "Wellness" },
+  { href: "/konkurranser", label: "Konkurranser" },
 ];
 
 export function Nav() {

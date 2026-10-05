@@ -95,6 +95,13 @@ export function BottomNav() {
 
           {menuOpen && (
             <div className="absolute bottom-full right-0 mb-2 surface-card border rounded-xl shadow-lg p-2 w-52 flex flex-col gap-1">
+              <Link
+                href="/konkurranser"
+                onClick={() => setMenuOpen(false)}
+                className="text-left px-3 py-2 text-sm rounded-lg hover:opacity-70"
+              >
+                Konkurranser
+              </Link>
               <button
                 onClick={() => {
                   toggleTheme();

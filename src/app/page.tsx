@@ -11,9 +11,10 @@ import {
   YAxis,
   Tooltip,
   Legend,
+  ReferenceLine,
   ResponsiveContainer,
 } from "recharts";
-import { StravaActivity } from "@/types/strava";
+import { StravaActivity, Competition } from "@/types/strava";
 import {
   groupActivitiesByPeriod,
   calculateIntensityFromActivities,
@@ -25,6 +26,7 @@ import {
   getTrainingLoadMonthView,
   getVolumeLastWeek,
   getVolumeMonthView,
+  getPeriodKey,
 } from "@/lib/data";
 
 const PERIOD_LABELS: Record<"week" | "month" | "year", string> = {
@@ -41,8 +43,47 @@ const formatPeriodTick = (value: string, period: "week" | "month" | "year") => {
   return value.split(" ")[1]?.replace(",", "") ?? value;
 };
 
+function daysUntil(dateStr: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(dateStr);
+  target.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function countdownLabel(dateStr: string): string {
+  const days = daysUntil(dateStr);
+  if (days > 1) return `om ${days} dager`;
+  if (days === 1) return "i morgen";
+  return "i dag";
+}
+
+// Vertikal etikett som løper nedover langs konkurranse-markøren, slik at lange
+// løpsnavn ikke klippes bort i toppen eller mot kantene.
+const competitionLabel =
+  (name: string) =>
+  function CompetitionLabel({ viewBox }: { viewBox?: { x?: number; y?: number } }) {
+    const x = viewBox?.x ?? 0;
+    const y = viewBox?.y ?? 0;
+    return (
+      <text
+        x={x}
+        y={y}
+        dx={11}
+        dy={6}
+        fill="#dc2626"
+        fontSize={10}
+        textAnchor="start"
+        transform={`rotate(90 ${x} ${y})`}
+      >
+        {name}
+      </text>
+    );
+  };
+
 export default function Dashboard() {
   const [activities, setActivities] = useState<StravaActivity[]>([]);
+  const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [period, setPeriod] = useState<"week" | "month" | "year">("month");
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [volumeMetric, setVolumeMetric] = useState<"timer" | "distanse">("timer");
@@ -106,6 +147,12 @@ export default function Dashboard() {
       .then((d) => {
         if (d) setThreshold(d);
       });
+
+    fetch("/api/competitions")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (Array.isArray(d)) setCompetitions(d);
+      });
   }, []);
 
   useEffect(() => {
@@ -149,7 +196,10 @@ export default function Dashboard() {
   }
 
   const availableYears = Array.from(
-    new Set(activities.map((a) => new Date(a.start_date_local).getFullYear()))
+    new Set([
+      ...activities.map((a) => new Date(a.start_date_local).getFullYear()),
+      ...competitions.map((c) => new Date(c.date).getFullYear()),
+    ])
   ).sort((a, b) => b - a);
   const yearRangeLabel =
     availableYears.length > 0
@@ -183,6 +233,33 @@ export default function Dashboard() {
   const loadMonthView = getTrainingLoadMonthView(activities, loadMonthOffset);
   const lastWeekVolume = getVolumeLastWeek(graphActivities);
   const volumeMonthView = getVolumeMonthView(activities, volumeMonthOffset);
+
+  // Konkurranser innenfor visningen (valgt år, eller alle i årsvisning), med
+  // periodenøkkel så de kan plasseres som markører i grafene.
+  const scopedCompetitions = (
+    period === "year"
+      ? competitions
+      : competitions.filter((c) => new Date(c.date).getFullYear() === selectedYear)
+  ).map((c) => ({ ...c, periodKey: getPeriodKey(new Date(c.date), period) }));
+
+  const upcomingCompetitions = [...competitions]
+    .filter((c) => daysUntil(c.date) >= 0)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  const loadPeriodKeys = new Set(trainingLoad.map((d) => d.period));
+  const loadMarkers = scopedCompetitions.filter((c) => loadPeriodKeys.has(c.periodKey));
+
+  // Markører for per-dag-månedsvisningene: konkurranser i den viste måneden,
+  // plassert på dagnummeret (matcher "d"-etiketten på x-aksen).
+  const monthCompetitionMarkers = (monthKey: string | undefined) =>
+    monthKey
+      ? competitions
+          .filter((c) => c.date.slice(0, 7) === monthKey)
+          .map((c) => ({ ...c, dayLabel: String(Number(c.date.slice(8, 10))) }))
+      : [];
+
+  const loadMonthMarkers = monthCompetitionMarkers(loadMonthView?.monthKey);
+  const volumeMonthMarkers = monthCompetitionMarkers(volumeMonthView?.monthKey);
 
   const allActivityTypes = Array.from(
     new Set(summaries.flatMap((s) => Object.keys(s.byType)))
@@ -239,6 +316,9 @@ export default function Dashboard() {
     return row;
   });
 
+  const volumePeriodKeys = new Set(volumeData.map((d) => String(d.name)));
+  const volumeMarkers = scopedCompetitions.filter((c) => volumePeriodKeys.has(c.periodKey));
+
   // Valgt årstall vises i overskriftene, unntatt i årsvisning der grafene
   // spenner over alle år.
   const yearBadge = period !== "year" && (
@@ -291,6 +371,31 @@ export default function Dashboard() {
           {yearRangeLabel}
         </button>
       </div>
+
+      {upcomingCompetitions.length > 0 && (
+        <section className="mb-8">
+          <h2 className="text-lg font-semibold mb-3">Kommende hovedløp</h2>
+          <div className="flex flex-wrap gap-4">
+            {upcomingCompetitions.map((c) => (
+              <div
+                key={c.id}
+                className="surface-card rounded-xl border-l-4 border-l-red-600 border p-4 min-w-[200px]"
+              >
+                <p className="font-semibold">{c.name}</p>
+                <p className="text-muted text-sm">
+                  {new Date(c.date).toLocaleDateString("nb-NO", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </p>
+                <p className="text-red-600 text-sm font-medium mt-1">{countdownLabel(c.date)}</p>
+                {c.goal && <p className="text-sm mt-1">🎯 {c.goal}</p>}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="grid grid-cols-3 gap-4 mb-8">
         <div className="surface-card rounded-xl border p-5">
@@ -462,6 +567,15 @@ export default function Dashboard() {
                   <Bar key={type} dataKey={type} stackId="a" fill={getColorForType(type)} />
                 ) : null
               )}
+              {volumeMarkers.map((c) => (
+                <ReferenceLine
+                  key={c.id}
+                  x={c.periodKey}
+                  stroke="#dc2626"
+                  strokeDasharray="4 3"
+                  label={competitionLabel(c.name)}
+                />
+              ))}
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -620,6 +734,15 @@ export default function Dashboard() {
                   name="Volum"
                   fill={volumeMetric === "timer" ? "#f97316" : "#3b82f6"}
                 />
+                {volumeMonthMarkers.map((c) => (
+                  <ReferenceLine
+                    key={c.id}
+                    x={c.dayLabel}
+                    stroke="#dc2626"
+                    strokeDasharray="4 3"
+                    label={competitionLabel(c.name)}
+                  />
+                ))}
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -716,6 +839,15 @@ export default function Dashboard() {
                 <YAxis tickLine={false} axisLine={false} className="chart-axis" />
                 <Tooltip formatter={(value) => `${value}`} />
                 <Bar dataKey="load" name="Belastning" fill="#8b5cf6" />
+                {loadMarkers.map((c) => (
+                  <ReferenceLine
+                    key={c.id}
+                    x={c.periodKey}
+                    stroke="#dc2626"
+                    strokeDasharray="4 3"
+                    label={competitionLabel(c.name)}
+                  />
+                ))}
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -814,6 +946,15 @@ export default function Dashboard() {
                   }}
                 />
                 <Bar dataKey="load" name="Belastning" fill="#8b5cf6" />
+                {loadMonthMarkers.map((c) => (
+                  <ReferenceLine
+                    key={c.id}
+                    x={c.dayLabel}
+                    stroke="#dc2626"
+                    strokeDasharray="4 3"
+                    label={competitionLabel(c.name)}
+                  />
+                ))}
               </BarChart>
             </ResponsiveContainer>
           </div>

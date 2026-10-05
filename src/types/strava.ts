@@ -66,3 +66,15 @@ export interface ActivitySummary {
     }
   >;
 }
+
+export interface Competition {
+  id: number;
+  name: string;
+  date: string; // yyyy-MM-dd
+  priority: string; // "A" | "B" | "C"
+  discipline?: string | null;
+  goal?: string | null;
+  result?: string | null;
+  notes?: string | null;
+  garminActivityId?: string | null;
+}

@@ -15,7 +15,7 @@ import {
 import { nb } from "date-fns/locale";
 import { StravaActivity, PeriodType, ActivitySummary } from "@/types/strava";
 
-function getPeriodKey(date: Date, period: PeriodType): string {
+export function getPeriodKey(date: Date, period: PeriodType): string {
   switch (period) {
     case "week": {
       const weekStart = startOfWeek(date, { weekStartsOn: 1 });
@@ -426,6 +426,7 @@ export function getTrainingLoadLastWeek(activities: StravaActivity[]): DayLoadPo
 export interface MonthlyLoadView {
   data: DayLoadPoint[];
   monthLabel: string;
+  monthKey: string;
   canPrev: boolean;
   canNext: boolean;
 }
@@ -450,6 +451,7 @@ export function getTrainingLoadMonthView(
   return {
     data: loadPerDay(withLoad, monthStart, endOfMonth(monthStart), "d", monthLabel),
     monthLabel,
+    monthKey: format(monthStart, "yyyy-MM"),
     canPrev: clamped < maxOffset, // eldre måned finnes
     canNext: clamped > 0, // nyere måned finnes
   };
@@ -515,6 +517,7 @@ export function getVolumeLastWeek(activities: StravaActivity[]): DayVolumePoint[
 export interface MonthlyVolumeView {
   data: DayVolumePoint[];
   monthLabel: string;
+  monthKey: string;
   canPrev: boolean;
   canNext: boolean;
 }
@@ -538,6 +541,7 @@ export function getVolumeMonthView(
   return {
     data: volumePerDay(activities, monthStart, endOfMonth(monthStart), "d", monthLabel),
     monthLabel,
+    monthKey: format(monthStart, "yyyy-MM"),
     canPrev: clamped < maxOffset, // eldre måned finnes
     canNext: clamped > 0, // nyere måned finnes
   };
