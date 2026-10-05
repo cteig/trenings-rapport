@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-SERVER_IP="${SERVER_IP:?Set SERVER_IP to the public IPv4 address from Terraform output.}"
+SERVER_IP="${SERVER_IP:-185.20.137.230}"
 SSH_USER="${SSH_USER:-root}"
 SSH_KEY_PATH="${SSH_KEY_PATH:-$HOME/.ssh/id_ed25519}"
 APP_NAME="${APP_NAME:-trenings-rapport}"

@@ -49,3 +49,6 @@ src/generated/
 
 # local theory notes
 treningsteori/
+
+# local training plan (not for deploy)
+/src/app/treningsplan/
