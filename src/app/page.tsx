@@ -743,58 +743,6 @@ export default function Dashboard() {
         </section>
       )}
 
-      <section className="mb-8">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold">
-            Intensitetsfordeling per {PERIOD_LABELS[period].toLowerCase()}
-            {yearBadge}
-          </h2>
-          <p className="text-muted text-sm">
-            Viser hvor stor andel av tiden i hver {PERIOD_LABELS[period].toLowerCase()} som ble
-            tilbrakt i sone 1–5.
-          </p>
-          {periodsWithoutHrData.length > 0 && (
-            <p className="text-sm text-amber-700 mt-2">
-              Mangler HR-data for: {periodsWithoutHrData.join(", ")}. Disse vises derfor med 0% i
-              alle soner.
-            </p>
-          )}
-        </div>
-        <div className="surface-card rounded-xl border p-5 h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={intensityByPeriod}>
-              <CartesianGrid vertical={false} className="chart-grid" />
-              <XAxis
-                dataKey="period"
-                tick={{ fontSize: 12 }}
-                tickLine={false}
-                axisLine={false}
-                className="chart-axis"
-                interval={0}
-                tickFormatter={(value: string) => formatPeriodTick(value, period)}
-              />
-              <YAxis
-                domain={[0, 100]}
-                tickFormatter={(v) => `${v}%`}
-                tickLine={false}
-                axisLine={false}
-                className="chart-axis"
-              />
-              <Tooltip
-                formatter={(value, name) => [`${value}%`, String(name)]}
-                labelFormatter={(label) => String(label)}
-              />
-              <Legend />
-              <Bar dataKey="zone1" name="Sone 1: <60%" stackId="zones" fill="#60a5fa" />
-              <Bar dataKey="zone2" name="Sone 2: 60–70%" stackId="zones" fill="#34d399" />
-              <Bar dataKey="zone3" name="Sone 3: 70–80%" stackId="zones" fill="#facc15" />
-              <Bar dataKey="zone4" name="Sone 4: 80–90%" stackId="zones" fill="#fb923c" />
-              <Bar dataKey="zone5" name="Sone 5: >90%" stackId="zones" fill="#f87171" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </section>
-
       {trainingLoad.length > 0 && (
         <section className="mb-8">
           <div className="mb-4">
@@ -923,6 +871,58 @@ export default function Dashboard() {
           </div>
         </section>
       )}
+
+      <section className="mb-8">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold">
+            Intensitetsfordeling per {PERIOD_LABELS[period].toLowerCase()}
+            {yearBadge}
+          </h2>
+          <p className="text-muted text-sm">
+            Viser hvor stor andel av tiden i hver {PERIOD_LABELS[period].toLowerCase()} som ble
+            tilbrakt i sone 1–5.
+          </p>
+          {periodsWithoutHrData.length > 0 && (
+            <p className="text-sm text-amber-700 mt-2">
+              Mangler HR-data for: {periodsWithoutHrData.join(", ")}. Disse vises derfor med 0% i
+              alle soner.
+            </p>
+          )}
+        </div>
+        <div className="surface-card rounded-xl border p-5 h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={intensityByPeriod}>
+              <CartesianGrid vertical={false} className="chart-grid" />
+              <XAxis
+                dataKey="period"
+                tick={{ fontSize: 12 }}
+                tickLine={false}
+                axisLine={false}
+                className="chart-axis"
+                interval={0}
+                tickFormatter={(value: string) => formatPeriodTick(value, period)}
+              />
+              <YAxis
+                domain={[0, 100]}
+                tickFormatter={(v) => `${v}%`}
+                tickLine={false}
+                axisLine={false}
+                className="chart-axis"
+              />
+              <Tooltip
+                formatter={(value, name) => [`${value}%`, String(name)]}
+                labelFormatter={(label) => String(label)}
+              />
+              <Legend />
+              <Bar dataKey="zone1" name="Sone 1: <60%" stackId="zones" fill="#60a5fa" />
+              <Bar dataKey="zone2" name="Sone 2: 60–70%" stackId="zones" fill="#34d399" />
+              <Bar dataKey="zone3" name="Sone 3: 70–80%" stackId="zones" fill="#facc15" />
+              <Bar dataKey="zone4" name="Sone 4: 80–90%" stackId="zones" fill="#fb923c" />
+              <Bar dataKey="zone5" name="Sone 5: >90%" stackId="zones" fill="#f87171" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </section>
 
       {vo2max.length > 1 && (
         <section className="mb-8">
