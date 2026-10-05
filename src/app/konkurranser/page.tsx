@@ -134,7 +134,7 @@ export default function KonkurranserPage() {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="F.eks. Hovedløpet 2027"
+            placeholder="F.eks. NM Lang"
             className="surface-card rounded-lg border px-3 py-2 text-sm text-foreground placeholder:text-muted"
             required
           />
